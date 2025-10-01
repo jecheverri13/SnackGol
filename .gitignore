@@ -1,0 +1,12 @@
+# Ignorar bin y debug en cualquier subcarpeta
+**/bin/
+**/debug/
+**/Debug/
+**/obj/
+
+# Opcional: archivos temporales de VS/VSCode
+.vs/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates

@@ -1,0 +1,6 @@
+@MSSnackGol_HostAddress = http://localhost:5046
+
+GET {{MSSnackGol_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
