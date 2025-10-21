@@ -9,6 +9,5 @@ namespace LibraryEntities.Models
         public string? name { get; set; }
         public string? emailAddress { get; set; }
         public string? docType { get; set; }
-        public string? status { get; set; }
     }
 }

@@ -1,6 +1,6 @@
 ﻿using LibraryAuthentication.Encryption;
+using LibraryEntities;
 using LibraryEntities.Models;
-using LibraryEntities.Models.AuthModels;
 using Microsoft.IdentityModel.Tokens;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
@@ -18,7 +18,7 @@ namespace LibraryAuthentication
         /// </summary>
         /// <param name="authenticationRequest">Autenticación (Company, Username, password)</param>
         /// <returns>Token Generado</returns>
-        public static Auth GenerateJwtToken(LoginSl login)
+        public static Auth GenerateJwtToken(LoginRequest login)
         {
             try
             {
@@ -26,7 +26,7 @@ namespace LibraryAuthentication
                 var tokenKey = Encoding.ASCII.GetBytes(JWT_SECURITY_KEY);
                 var claimsIdentity = new ClaimsIdentity(new List<Claim>
                 {
-                    new Claim("Company", login.CompanyDB),
+                    new Claim("UserName", login.UserNname),
                 });
                     
                 var signingCredentials = new SigningCredentials(

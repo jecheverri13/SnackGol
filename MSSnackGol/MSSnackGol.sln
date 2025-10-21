@@ -11,6 +11,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LibraryEncrypt", "..\Librar
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LibraryAuthentication", "..\LibraryAuthentication\LibraryAuthentication.csproj", "{77657E47-7FF8-E42D-09CE-D59337B6EEFA}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LibraryEntities", "..\LibraryEntities\LibraryEntities.csproj", "{938EC07A-5219-4ED9-B090-0F35B78ABEBF}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -33,6 +35,10 @@ Global
 		{77657E47-7FF8-E42D-09CE-D59337B6EEFA}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{77657E47-7FF8-E42D-09CE-D59337B6EEFA}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{77657E47-7FF8-E42D-09CE-D59337B6EEFA}.Release|Any CPU.Build.0 = Release|Any CPU
+		{938EC07A-5219-4ED9-B090-0F35B78ABEBF}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{938EC07A-5219-4ED9-B090-0F35B78ABEBF}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{938EC07A-5219-4ED9-B090-0F35B78ABEBF}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{938EC07A-5219-4ED9-B090-0F35B78ABEBF}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

@@ -1,4 +1,5 @@
-﻿using LibraryEntities.Models;
+﻿using LibraryEntities;
+using LibraryEntities.Models;
 using Microsoft.AspNetCore.Mvc;
 
 namespace MSSnackGol.Controllers
@@ -13,7 +14,7 @@ namespace MSSnackGol.Controllers
         }
 
         [HttpPost("login")]
-        public IActionResult Login([FromBody] RequestSL oLogin)
+        public IActionResult Login([FromBody] LoginRequest oLogin)
         {
             throw new NotImplementedException();
         }

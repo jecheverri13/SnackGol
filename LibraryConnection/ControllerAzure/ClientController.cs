@@ -36,8 +36,7 @@ namespace LibraryConnection.ControllerAzure
                             document = e.document,
                             name = e.name,
                             emailAddress = e.emailAddress,
-                            docType = e.docType,
-                            status = e.status
+                            docType = e.docType
                         })
                         .ToList();
 
@@ -70,8 +69,7 @@ namespace LibraryConnection.ControllerAzure
                             document = e.document,
                             name = e.name,
                             emailAddress = e.emailAddress,
-                            docType = e.docType,
-                            status = e.status
+                            docType = e.docType
                         })
                         .ToList();
                     return new Response<List<ClientResponse>>(true, HttpStatusCode.OK, clientResponses);
@@ -108,8 +106,7 @@ namespace LibraryConnection.ControllerAzure
                         name = e.name,
                         document = e.document,
                         emailAddress = e.emailAddress,
-                        docType = e.docType,
-                        status = e.status
+                        docType = e.docType
                     })
                     .ToList()
                     .FirstOrDefault();

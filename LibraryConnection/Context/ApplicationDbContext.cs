@@ -1,7 +1,6 @@
 ﻿using LibraryConnection.DbSet;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
-using ServiceLayerCSS.Enum;
 
 namespace LibraryConnection.Context
 {
@@ -73,9 +72,6 @@ namespace LibraryConnection.Context
                 entity.HasOne(d => d.client)
                       .WithMany(p => p.orders)
                       .HasForeignKey(d => d.customer_id);
-                entity.HasOne(d => d.resolution)
-                      .WithMany(p => p.orders)
-                      .HasForeignKey(d => d.resolution_id);
             });
           
             modelBuilder.Entity<OrderLine>(entity =>

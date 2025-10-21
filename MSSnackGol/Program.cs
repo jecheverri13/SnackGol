@@ -1,25 +1,9 @@
 using Azure.Monitor.OpenTelemetry.AspNetCore;
 using LibraryAuthentication;
-using MSSnackGol.BackgroundProcess;
-using MSSnackGol.Logic.Context;
-using MSSnackGol.Logic.Contract;
-using MSSnackGol.Logic.Implementation;
-using MSSnackGol.Logic.Services;
 using System.Net;
 
 var builder = WebApplication.CreateBuilder(args);
 
-//Add own services.
-builder.Services.AddScoped<GeneralService>();
-builder.Services.AddScoped<ManagerService>();
-builder.Services.AddScoped<PaymentGatewayDependencies>();
-
-//Add own payment gateways services.
-builder.Services.AddScoped<PaymentGatewayBase, CredibancoImpl>();
-builder.Services.AddScoped<PaymentGatewayFactory>();
-
-// Add services to the container.
-builder.Services.AddHostedService<UpdateStatusTransactionService>();
 builder.Services.AddMemoryCache();
 builder.Services.AddControllers();
 builder.Services.AddHttpClient();

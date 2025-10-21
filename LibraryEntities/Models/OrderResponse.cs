@@ -31,7 +31,6 @@ namespace LibraryEntities.Models
         public string? cufe { get; set; }
         public string? url { get; set; }
         public int? doc_entry_sap { get; set; }
-        public ResolutionResponse Resolution { get; set; } 
 
         public List<OrderLineResponse>? OrderLines { get; set; }
     }
