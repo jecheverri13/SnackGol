@@ -6,10 +6,10 @@ namespace MSSnackGol.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    public class LoginManagmentController : ControllerBase
+    public class LoginManagementController : ControllerBase
     {
 
-        public LoginManagmentController()
+        public LoginManagementController()
         {
         }
 

@@ -16,6 +16,6 @@ namespace LibraryConnection.DbSet
         public string name { get; set; }
         [Required]
         public string description { get; set; }
-        public ICollection<User> users { get; set; }
+        public ICollection<User>? users { get; set; }
     }
 }

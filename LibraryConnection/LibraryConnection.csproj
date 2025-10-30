@@ -31,10 +31,4 @@
     <ProjectReference Include="..\LibraryEntities\LibraryEntities.csproj" />
   </ItemGroup>
 
-  <ItemGroup>
-    <Reference Include="B1ServiceLayerCSS">
-      <HintPath>DLL\B1ServiceLayerCSS.dll</HintPath>
-    </Reference>
-  </ItemGroup>
-
 </Project>

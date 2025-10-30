@@ -47,7 +47,9 @@ namespace LibraryConnection.Context
                 
                 entity.HasKey(u => u.id);
                 entity.Property(u => u.id).ValueGeneratedOnAdd();
-
+                entity.HasOne(u => u.Role)
+                      .WithMany(r => r.users)
+                      .HasForeignKey(u => u.id_role);
                 // las demás propiedades
                 entity.Property(u => u.name).IsRequired();
                 entity.Property(u => u.last_name).IsRequired();

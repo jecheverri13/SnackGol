@@ -1,20 +1,16 @@
 ﻿using LibraryConnection.Context;
 using LibraryConnection.DbSet;
-using LibraryConnection.Dtos;
 using LibraryEncrypt.Encryption;
 using LibraryEntities.Models;
-using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Net;
 
 
 namespace LibraryConnection.ControllerAzure
 {
-    internal class UserController
+    public class UserController
     {
         /// <summary>
-        /// Registro de Usuarios y Asesores, para determina si es cliente o asesor se tiene el cuenta el estado de los campos (isAdvisor, isClient)
+        /// Registro de Usuarios
         /// </summary>
         /// <param name="oUser">Usuario a Crear</param>
         /// <returns>Objeto dynamic con el estado de la petición de creación</returns>
@@ -24,7 +20,6 @@ namespace LibraryConnection.ControllerAzure
             {
                 using (var contexto = new ApplicationDbContext())
                 {
-                    //Verificar si ya existe un usuario con el mismo email
                     var existingClient = contexto.users
                         .FirstOrDefault(c => c.email == oUser.email);
                     var role = contexto.roles.FirstOrDefault(r => r.id == oUser.id_role);
@@ -34,7 +29,6 @@ namespace LibraryConnection.ControllerAzure
                     }
                     if (existingClient != null)
                     {
-                        // Si ya existe, retornar un error indicando que el cliente ya está registrado
                         return new Response<dynamic>(false, HttpStatusCode.Conflict, "Ya existe un usuario con el mismo email.");
                     }
                     var encryptedPassword = EncryptCSS.Encrypt(oUser.password);
@@ -46,12 +40,11 @@ namespace LibraryConnection.ControllerAzure
                         id_role=oUser.id_role,
                         password = encryptedPassword
                     };
-                    // Si no existe, agregar el nuevo cliente
                     contexto.users.Add(user);
                     int index = contexto.SaveChanges();
                     if (index >= 1)
                     {
-                        return new Response<dynamic>(true, HttpStatusCode.Created, user);
+                        return new Response<dynamic>(true, HttpStatusCode.Created, oUser);
                     }
                 }
                 return new Response<dynamic>(false, HttpStatusCode.BadRequest);
@@ -67,11 +60,12 @@ namespace LibraryConnection.ControllerAzure
                 return new Response<dynamic>(false, HttpStatusCode.InternalServerError, "Error PostDbClient", errorMessage);
             }
         }
+
         /// <summary>
-        /// Obtener una consulta por medio de su email
+        /// Obtener usuario por medio de su email
         /// </summary>
         /// <param email="email">email del usuario</param>
-        /// <returns>Query</returns>
+        /// <returns>UserResponse</returns>
         public static Response<UserResponse> GetDbUserByEmail(string userEmail)
         {
             try
@@ -112,7 +106,44 @@ namespace LibraryConnection.ControllerAzure
                     errorMessage += " Inner exception: " + ex.InnerException.Message;
                 }
 
-                return new Response<UserResponse>(false, HttpStatusCode.InternalServerError, "Error obtenendo el usuario", errorMessage);
+                return new Response<UserResponse>(false, HttpStatusCode.InternalServerError, "Error obteniendo el usuario", errorMessage);
+            }
+        }
+
+        /// <summary>
+        /// Obtener todos los usuarios
+        /// </summary>
+        /// <returns>Lista de usuarios</returns>
+        public static Response<List<UserResponse>> GetDbUsers()
+        {
+            try
+            {
+                using (var contexto = new ApplicationDbContext())
+                {
+                    var userResponses = contexto.users
+                        .AsEnumerable()
+                        .Select(e => new UserResponse
+                        {
+                            id = e.id,
+                            name = e.name,
+                            email = e.email,
+                            last_name = e.last_name,
+                            id_role = e.id_role
+                        })
+                        .ToList();
+
+                    return new Response<List<UserResponse>>(true, HttpStatusCode.OK, userResponses);
+                }
+            }
+            catch (Exception ex)
+            {
+                string errorMessage = "Error: " + ex.Message;
+                if (ex.InnerException != null)
+                {
+                    errorMessage += " Inner exception: " + ex.InnerException.Message;
+                }
+
+                return new Response<List<UserResponse>>(false, HttpStatusCode.InternalServerError, "Error GetDbUsers", errorMessage);
             }
         }
     }

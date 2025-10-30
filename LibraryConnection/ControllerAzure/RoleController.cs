@@ -1,22 +1,16 @@
 ﻿using LibraryConnection.Context;
 using LibraryConnection.DbSet;
-using LibraryEncrypt.Encryption;
 using LibraryEntities.Models;
-using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Net;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace LibraryConnection.ControllerAzure
 {
-    internal class RoleContoller
+    public class RoleController
     {
         /// <summary>
-        /// Registro de roles, no se podra crear un rol con el mismo nombre
+        /// Registro de roles, no se podrá crear un rol con el mismo nombre
         /// </summary>
-        /// <param name="oRole">Role a Crear</param>
+        /// <param name="oRole">Rol a Crear</param>
         /// <returns>Objeto dynamic con el estado de la petición de creación</returns>
         public static Response<dynamic> PostDbRole(RoleRequest oRole)
         {
@@ -24,21 +18,17 @@ namespace LibraryConnection.ControllerAzure
             {
                 using (var contexto = new ApplicationDbContext())
                 {
-                    //Verificar si ya existe un usuario con el mismo email
-                    var existingClient = contexto.roles
+                    var existingRole = contexto.roles
                         .FirstOrDefault(c => c.name == oRole.name);
-                    if (existingClient != null)
+                    if (existingRole != null)
                     {
-                        // Si ya existe, retornar un error indicando que el cliente ya está registrado
                         return new Response<dynamic>(false, HttpStatusCode.Conflict, "Ya existe un rol con el mismo nombre.");
                     }
-                    Role role = new Role()
+                    Role role = new()
                     {
                         name=oRole.name,
                         description=oRole.description
                     };
-
-                    // Si no existe, agregar el nuevo cliente
                     contexto.roles.Add(role);
 
                     int index = contexto.SaveChanges();
@@ -57,14 +47,13 @@ namespace LibraryConnection.ControllerAzure
                     errorMessage += " Inner exception: " + ex.InnerException.Message;
                 }
 
-                return new Response<dynamic>(false, HttpStatusCode.InternalServerError, "Error PostDbClient", errorMessage);
+                return new Response<dynamic>(false, HttpStatusCode.InternalServerError, "Error PostDbRole.", errorMessage);
             }
         }
         /// <summary>
-        /// Obtener una consulta por medio de su email
+        /// Obtener todos los roles
         /// </summary>
-        /// <param email="email">email del usuario</param>
-        /// <returns>Query</returns>
+        /// <returns>Response<RoleResponse></returns>
         public static Response<RoleResponse> GetDbRoles()
         {
             try
@@ -90,7 +79,7 @@ namespace LibraryConnection.ControllerAzure
                     }
                     else
                     {
-                        return new Response<RoleResponse>(false, HttpStatusCode.NotFound, "No se encontró un role");
+                        return new Response<RoleResponse>(false, HttpStatusCode.NotFound, "No se encontró un rol.");
                     }
                 }
             }
@@ -101,7 +90,7 @@ namespace LibraryConnection.ControllerAzure
                 {
                     errorMessage += " Inner exception: " + ex.InnerException.Message;
                 }
-                return new Response<RoleResponse>(false, HttpStatusCode.InternalServerError, "Error obtenendo el role", errorMessage);
+                return new Response<RoleResponse>(false, HttpStatusCode.InternalServerError, "Error obteniendo el rol.", errorMessage);
             }
         }
     }   
