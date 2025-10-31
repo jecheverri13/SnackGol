@@ -10,8 +10,9 @@
     <Content Remove="Pages\Carrito.cshtml" />
   </ItemGroup>
 
+  <!-- Enable runtime Razor view recompilation in Development -->
   <ItemGroup>
-    <None Include="Views\Carrito\Index.cshtml" />
+    <PackageReference Include="Microsoft.AspNetCore.Mvc.Razor.RuntimeCompilation" Version="8.0.10" />
   </ItemGroup>
 
   <ItemGroup>
@@ -19,7 +20,6 @@
     <ProjectReference Include="..\LibraryConnection\LibraryConnection.csproj" />
     <ProjectReference Include="..\LibraryEncrypt\LibraryEncrypt.csproj" />
     <ProjectReference Include="..\LibraryEntities\LibraryEntities.csproj" />
-    <ProjectReference Include="..\MSSnackGol\MSSnackGol.csproj" />
   </ItemGroup>
 
 </Project>

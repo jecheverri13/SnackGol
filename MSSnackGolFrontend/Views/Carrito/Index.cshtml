@@ -1,9 +1,15 @@
-﻿@{
+﻿@model MSSnackGolFrontend.Models.CartPageViewModel
+@{
     ViewData["Title"] = "Carrito de Compras";
     Layout = "~/Views/Shared/_Layout.cshtml";
+    var co = new System.Globalization.CultureInfo("es-CO");
 }
 
 <div class="container my-4">
+    @if (TempData["CartFlash"] is string flash && !string.IsNullOrWhiteSpace(flash))
+    {
+        <div class="alert alert-info">@flash</div>
+    }
     <!-- Encabezado del carrito -->
     <div class="d-flex justify-content-between align-items-center mb-4">
         <h2 class="mb-0">Tu Carrito de Compras</h2>
@@ -12,110 +18,178 @@
         </a>
     </div>
 
-    <!-- Resumen del pedido -->
     <div class="row">
         <div class="col-lg-8">
-            <!-- Productos en el carrito -->
+            <!-- Catálogo de productos -->
+            <div class="card shadow-sm mb-4">
+                <div class="card-header bg-light d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">Productos</h5>
+                    <form asp-action="SampleData" method="post" class="m-0">
+                        <button class="btn btn-sm btn-outline-secondary" title="Agrega algunos productos al carrito (solo desarrollo)">
+                            Cargar datos de muestra
+                        </button>
+                    </form>
+                </div>
+                <div class="card-body">
+                    @if (Model.Products?.Count > 0)
+                    {
+                        <div class="row">
+                            @foreach (var p in Model.Products)
+                            {
+                                <div class="col-6 col-md-6 col-lg-4 mb-3">
+                                    <div class="border rounded p-2 h-100 d-flex flex-column product-card">
+                                        <div class="product-img-wrapper rounded overflow-hidden mb-2 position-relative" style="height:200px;">
+                                            @{ 
+                                                var raw = p?.image_url?.Trim();
+                                                var placeholder = "https://via.placeholder.com/400x300?text=Sin+imagen";
+
+                                                string finalImg;
+                                                if (!string.IsNullOrWhiteSpace(raw))
+                                                {
+                                                    // absoluto http/https
+                                                    if (Uri.TryCreate(raw, UriKind.Absolute, out var abs) && (abs.Scheme == Uri.UriSchemeHttp || abs.Scheme == Uri.UriSchemeHttps))
+                                                    {
+                                                        finalImg = raw;
+                                                    }
+                                                    // esquema relativo //host/path
+                                                    else if (raw.StartsWith("//"))
+                                                    {
+                                                        finalImg = "https:" + raw;
+                                                    }
+                                                    // relativo a origen actual (p.ej. /imgs/..)
+                                                    else if (raw.StartsWith("/"))
+                                                    {
+                                                        finalImg = raw;
+                                                    }
+                                                    else
+                                                    {
+                                                        finalImg = placeholder;
+                                                    }
+                                                }
+                                                else
+                                                {
+                                                    finalImg = placeholder;
+                                                }
+                                            }
+                                            <img src="@finalImg" alt="@p.name" class="w-100 h-100 object-fit-cover" loading="lazy" onerror="this.onerror=null;this.src='https://via.placeholder.com/400x300?text=Sin+imagen';" referrerpolicy="no-referrer" />
+                                            @if (p.stock == 0)
+                                            {
+                                                <span class="badge bg-danger position-absolute top-0 start-0 m-2 shadow-sm">Agotado</span>
+                                            }
+                                        </div>
+                                        <div class="flex-fill">
+                                            <h6 class="mb-1">@p.name</h6>
+                                            @if (!string.IsNullOrWhiteSpace(p?.description))
+                                            {
+                                                var clamp = p.description!.Length > 90 ? " line-clamp-2" : string.Empty;
+                                                <div class="text-muted small@clamp">@p.description</div>
+                                            }
+                                            <div class="d-flex justify-content-between align-items-center mt-2">
+                                                <div class="@(p.stock == 0 ? "text-danger" : "small text-muted")">@(p.stock == 0 ? "Agotado" : $"Stock: {p.stock}")</div>
+                                                <div class="fw-bold text-primary">@p.price.ToString("C0", co)</div>
+                                            </div>
+                                        </div>
+                                        <form asp-action="AddItem" method="post" class="mt-2 d-flex gap-2 align-items-center">
+                                            <input type="hidden" name="productId" value="@p.id" />
+                                            <input type="number" name="quantity" value="1" min="1" max="@p.stock" class="form-control form-control-sm" style="width:80px;" />
+                                            <button class="btn btn-primary btn-sm" @(p.stock == 0 ? "disabled" : null)>Añadir</button>
+                                        </form>
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="text-muted">No hay productos disponibles.</div>
+                    }
+                </div>
+            </div>
+
+            <!-- Carrito actual -->
             <div class="card shadow-sm mb-4">
                 <div class="card-header bg-light">
-                    <h5 class="mb-0">Productos en tu carrito</h5>
+                    <h5 class="mb-0">Tu carrito (@(Model.Cart?.count ?? 0) artículos)</h5>
                 </div>
                 <div class="card-body p-0">
-                    <!-- Producto 1 -->
-                    <div class="row g-0 p-3 align-items-center border-bottom">
-                        <div class="col-auto" style="width: 100px;">
-                            <div class="border bg-light d-flex align-items-center justify-content-center rounded" style="height: 80px;">
-                                <small class="text-muted">Imagen</small>
-                            </div>
-                        </div>
-                        <div class="col">
-                            <div class="card-body py-1">
-                                <h6 class="card-title mb-1">Producto 1</h6>
-                                <p class="card-text text-muted small mb-2">Venta definitiva - No se aceptan devoluciones</p>
-                                <div class="d-flex align-items-center gap-2 flex-wrap">
-                                    <div class="d-flex align-items-center">
-                                        <label class="form-label me-2 mb-0">Cantidad:</label>
-                                        <input type="number" min="1" value="3" class="form-control form-control-sm" style="width: 70px;" />
-                                    </div>
-                                    <button class="btn btn-sm btn-outline-danger">
-                                        <i class="bi bi-trash"></i> Eliminar
-                                    </button>
-                                    <div class="form-check ms-2">
-                                        <input class="form-check-input" type="checkbox" value="" id="recogerEnCocina1">
-                                        <label class="form-check-label small" for="recogerEnCocina1">Recoger en Cocina</label>
-                                    </div>
+                    @if (Model.Cart?.items != null && Model.Cart.items.Count > 0)
+                    {
+                        @foreach (var item in Model.Cart.items)
+                        {
+                            <div class="cart-item rounded-3 p-3 mb-2 bg-body-tertiary d-flex flex-column flex-sm-row justify-content-between align-items-start align-items-sm-center">
+                                <div class="me-3">
+                                    <h6 class="mb-1">@item.name</h6>
+                                    <small class="text-muted">@item.unit_price.ToString("C0", co) x @item.quantity</small>
+                                </div>
+                                <div class="d-flex align-items-center gap-2 mt-3 mt-sm-0">
+                                    <form asp-action="UpdateItem" method="post" class="d-flex align-items-center gap-2">
+                                        <input type="hidden" name="id" value="@item.id" />
+                                        <input type="number" name="quantity" min="0" value="@item.quantity" class="form-control form-control-sm" style="width: 70px;" />
+                                        <button class="btn btn-outline-secondary btn-icon-sm" title="Actualizar cantidad" aria-label="Actualizar">
+                                            <i class="bi bi-arrow-repeat"></i>
+                                        </button>
+                                    </form>
+                                    <div class="text-end fw-bold text-primary me-1" style="min-width: 110px;">@item.subtotal.ToString("C0", co)</div>
+                                    <form asp-action="DeleteItem" method="post">
+                                        <input type="hidden" name="id" value="@item.id" />
+                                        <button class="btn btn-outline-danger btn-icon-sm" title="Eliminar" aria-label="Eliminar">
+                                            <i class="bi bi-trash"></i>
+                                        </button>
+                                    </form>
                                 </div>
                             </div>
-                        </div>
-                        <div class="col-auto text-end">
-                            <h5 class="text-primary mb-0">$99.999</h5>
-                        </div>
-                    </div>
-
-                    <!-- Producto 2 -->
-                    <div class="row g-0 p-3 align-items-center">
-                        <div class="col-auto" style="width: 100px;">
-                            <div class="border bg-light d-flex align-items-center justify-content-center rounded" style="height: 80px;">
-                                <small class="text-muted">Imagen</small>
-                            </div>
-                        </div>
-                        <div class="col">
-                            <div class="card-body py-1">
-                                <h6 class="card-title mb-1">Producto 2</h6>
-                                <p class="card-text text-muted small mb-2">Venta definitiva - No se aceptan devoluciones</p>
-                                <div class="d-flex align-items-center gap-2 flex-wrap">
-                                    <div class="d-flex align-items-center">
-                                        <label class="form-label me-2 mb-0">Cantidad:</label>
-                                        <input type="number" min="1" value="1" class="form-control form-control-sm" style="width: 70px;" />
-                                    </div>
-                                    <button class="btn btn-sm btn-outline-danger">
-                                        <i class="bi bi-trash"></i> Eliminar
-                                    </button>
-                                    <div class="form-check ms-2">
-                                        <input class="form-check-input" type="checkbox" value="" id="recogerEnCocina2" checked>
-                                        <label class="form-check-label small" for="recogerEnCocina2">Recoger en Cocina</label>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="col-auto text-end">
-                            <h5 class="text-primary mb-0">$49.999</h5>
-                        </div>
-                    </div>
+                        }
+                    }
+                    else
+                    {
+                        <div class="p-3 text-muted">Tu carrito está vacío.</div>
+                    }
                 </div>
             </div>
         </div>
 
         <!-- Resumen de compra -->
         <div class="col-lg-4">
-            <div class="card shadow-sm sticky-top" style="top: 20px;">
+            <div class="card shadow summary-sticky sticky-top rounded-3" style="top: 20px;">
                 <div class="card-header bg-primary text-white">
                     <h5 class="mb-0">Resumen del Pedido</h5>
                 </div>
                 <div class="card-body">
                     <div class="d-flex justify-content-between mb-2">
-                        <span>Subtotal (2 productos):</span>
-                        <span>$149.998</span>
+                        <span>Subtotal (@(Model.Cart?.count ?? 0) productos):</span>
+                        <span>@((Model.Cart?.total ?? 0).ToString("C0", co))</span>
                     </div>
                     <div class="d-flex justify-content-between mb-2">
                         <span>Envío:</span>
                         <span class="text-success">Gratis</span>
                     </div>
-                    <div class="d-flex justify-content-between mb-2">
-                        <span>Impuestos:</span>
-                        <span>$29.999</span>
-                    </div>
                     <hr>
-                    <div class="d-flex justify-content-between mb-3">
-                        <strong>Total:</strong>
-                        <strong class="h5 text-primary">$179.997</strong>
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <span class="fw-semibold">Total:</span>
+                        <span class="fs-3"><span class="badge bg-primary-subtle text-primary border">@((Model.Cart?.total ?? 0).ToString("C0", co))</span></span>
                     </div>
 
-                    <div class="d-grid gap-2">
-                        <button class="btn btn-dark btn-lg">Proceder con el Pago</button>
+                    <div class="text-muted small mb-2">Moneda: COP</div>
+
+                    <form asp-action="Checkout" method="post" class="d-grid gap-2">
+                        <button class="btn btn-dark btn-lg" @(Model.Cart?.items == null || Model.Cart.items.Count == 0 ? "disabled" : null)>Proceder con el Pago</button>
                         <a href="~/" class="btn btn-outline-secondary">Continuar comprando</a>
-                    </div>
+                    </form>
                 </div>
+            </div>
+        </div>
+    </div>
+    <!-- Barra de checkout móvil fija -->
+    <div class="d-lg-none mobile-checkout-bar fixed-bottom bg-white border-top shadow-sm p-3">
+        <div class="container">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <div class="small text-muted">Total</div>
+                    <div class="fw-bold">@((Model.Cart?.total ?? 0).ToString("C0", co))</div>
+                </div>
+                <form asp-action="Checkout" method="post">
+                    <button class="btn btn-dark" @(Model.Cart?.items == null || Model.Cart.items.Count == 0 ? "disabled" : null)>Pagar</button>
+                </form>
             </div>
         </div>
     </div>
@@ -129,6 +203,48 @@
             position: -webkit-sticky;
             position: sticky;
             z-index: 1020;
+        }
+        /* Productos: tarjetas más visuales */
+        .product-card {
+            transition: transform .15s ease, box-shadow .15s ease;
+        }
+        .product-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 0.75rem 1.5rem rgba(0,0,0,.08);
+        }
+        .product-img-wrapper img {
+            transition: transform .2s ease;
+        }
+        .product-card:hover .product-img-wrapper img {
+            transform: scale(1.05);
+        }
+        /* Ítems del carrito visualmente separados */
+        .cart-item {
+            border: 1px solid var(--bs-border-color, #dee2e6);
+        }
+        /* Botón de icono pequeño y cuadrado */
+        .btn-icon-sm {
+            --size: 32px;
+            width: var(--size);
+            height: var(--size);
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0;
+        }
+        .line-clamp-2 {
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+        /* Sticky mejorado para que no se vea pegado */
+        .summary-sticky {
+            box-shadow: 0 0.5rem 1rem rgba(0,0,0,.06);
+        }
+        /* Barra móvil fija: respeta área segura */
+        .mobile-checkout-bar {
+            padding-bottom: calc(env(safe-area-inset-bottom) + 0.5rem);
         }
     </style>
 }
