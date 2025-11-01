@@ -10,3 +10,6 @@
 *.suo
 *.userosscache
 *.sln.docstates
+
+# No versionar la documentación generada/diagramas
+/docs/

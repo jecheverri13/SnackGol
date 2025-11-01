@@ -11,7 +11,7 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddMemoryCache();
 builder.Services.AddControllers();
 builder.Services.AddHttpClient();
-
+builder.Services.AddDbContext<ApplicationDbContext>();
 
 var environment = builder.Environment.EnvironmentName;
 builder.Configuration.SetBasePath(Directory.GetCurrentDirectory())

@@ -9,7 +9,7 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace LibraryConnection.Migrations
 {
     /// <inheritdoc />
-    public partial class SeedInitialCart : Migration
+    public partial class Inicial : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -230,15 +230,15 @@ namespace LibraryConnection.Migrations
                 columns: new[] { "id", "category_id", "description", "image_url", "is_active", "name", "price", "stock" },
                 values: new object[,]
                 {
-                    { 1, 1, "Botella de agua", null, true, "Agua mineral 600ml", 1.2, 100 },
-                    { 2, 1, "Bebida gaseosa", null, true, "Gaseosa cola 500ml", 1.8, 80 },
-                    { 3, 1, "Sabor naranja", null, true, "Jugo natural 350ml", 1.5, 60 },
-                    { 4, 2, "Snack salado", null, true, "Papitas clásicas 45g", 1.0, 120 },
-                    { 5, 2, "Bolsa de maní", null, true, "Maní salado 50g", 0.90000000000000002, 90 },
-                    { 6, 2, "Con queso", null, true, "Nachos 70g", 1.3, 70 },
-                    { 7, 3, "70% cacao", null, true, "Chocolate barra 40g", 1.1000000000000001, 50 },
-                    { 8, 3, "Frutales", null, true, "Gomitas 90g", 0.94999999999999996, 65 },
-                    { 9, 3, "Mix sabores", null, true, "Caramelos surtidos 100g", 0.84999999999999998, 150 }
+                    { 1, 1, "Botella de agua", "https://images.unsplash.com/photo-1637774139107-b83aae618551?ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&q=80&w=735", true, "Agua mineral 600ml", 2000.0, 100 },
+                    { 2, 1, "Bebida gaseosa", "https://images.unsplash.com/photo-1622708862830-a026e3ef60bd?ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&q=80&w=682", true, "Gaseosa cola 500ml", 2500.0, 80 },
+                    { 3, 1, "Sabor naranja", "https://images.unsplash.com/photo-1621506289894-c3a62d6be8f3?ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&q=80&w=687", true, "Jugo natural 350ml", 2200.0, 60 },
+                    { 4, 2, "Snack salado", "https://images.unsplash.com/photo-1741520150134-0d60d82dfac9?ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&q=80&w=1406", true, "Papitas clásicas 45g", 1800.0, 120 },
+                    { 5, 2, "Bolsa de maní", "https://www.istockphoto.com/photo/roasted-salted-peanuts-in-bowl-on-wooden-table-gm2208003368-625205923?utm_source=unsplash&utm_medium=affiliate&utm_campaign=srp_photos_bottom&utm_content=https%3A%2F%2Funsplash.com%2Fes%2Fs%2Ffotos%2Froasted-peanuts-salted&utm_term=roasted+peanuts+salted%3A%3Alayout-below-fold-units-2%3Acontrol", true, "Maní salado 50g", 1500.0, 90 },
+                    { 6, 2, "Con queso", "https://unsplash.com/es/fotos/una-pizza-con-verduras-y-queso-RV4-buXKOS8", true, "Nachos 70g", 2300.0, 70 },
+                    { 7, 3, "70% cacao", "https://unsplash.com/es/fotos/barra-de-chocolate-hersheys-sobre-superficie-blanca-7pvYgmkqOzc", true, "Chocolate barra 40g", 2000.0, 50 },
+                    { 8, 3, "Frutales", "https://unsplash.com/es/fotos/un-monton-de-caramelos-de-diferentes-colores-sobre-una-superficie-azul-1hRz-_MIwbk", true, "Gomitas 90g", 1600.0, 65 },
+                    { 9, 3, "Bandeja de cupcakes", "https://media.istockphoto.com/id/171360702/es/foto/vista-a%C3%A9rea-de-la-bandeja-con-cupcakes.webp?a=1&b=1&s=612x612&w=0&k=20&c=y9htsC84M1g1lu03oQYNBMIWqxMmWQr9_T7nGdk8hvA=", true, "Cupcakes surtidos", 1800.0, 40 }
                 });
 
             migrationBuilder.CreateIndex(

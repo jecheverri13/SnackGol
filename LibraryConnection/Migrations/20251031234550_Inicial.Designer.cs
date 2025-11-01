@@ -12,8 +12,8 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace LibraryConnection.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20251031050838_UpdateProductSeedPrices")]
-    partial class UpdateProductSeedPrices
+    [Migration("20251031234550_Inicial")]
+    partial class Inicial
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -258,7 +258,7 @@ namespace LibraryConnection.Migrations
                             id = 1,
                             category_id = 1,
                             description = "Botella de agua",
-                            image_url = "https://images.unsplash.com/photo-1548833793-71ad3875f2ac?w=800&q=80",
+                            image_url = "https://images.unsplash.com/photo-1637774139107-b83aae618551?ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&q=80&w=735",
                             is_active = true,
                             name = "Agua mineral 600ml",
                             price = 2000.0,
@@ -269,7 +269,7 @@ namespace LibraryConnection.Migrations
                             id = 2,
                             category_id = 1,
                             description = "Bebida gaseosa",
-                            image_url = "https://images.unsplash.com/photo-1623446043588-739e8f6daba1?w=800&q=80",
+                            image_url = "https://images.unsplash.com/photo-1622708862830-a026e3ef60bd?ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&q=80&w=682",
                             is_active = true,
                             name = "Gaseosa cola 500ml",
                             price = 2500.0,
@@ -280,7 +280,7 @@ namespace LibraryConnection.Migrations
                             id = 3,
                             category_id = 1,
                             description = "Sabor naranja",
-                            image_url = "https://images.unsplash.com/photo-1542444459-db63c0d2c979?w=800&q=80",
+                            image_url = "https://images.unsplash.com/photo-1621506289894-c3a62d6be8f3?ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&q=80&w=687",
                             is_active = true,
                             name = "Jugo natural 350ml",
                             price = 2200.0,
@@ -291,7 +291,7 @@ namespace LibraryConnection.Migrations
                             id = 4,
                             category_id = 2,
                             description = "Snack salado",
-                            image_url = "https://images.unsplash.com/photo-1596461404969-9ae70d18e7d5?w=800&q=80",
+                            image_url = "https://images.unsplash.com/photo-1741520150134-0d60d82dfac9?ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&q=80&w=1406",
                             is_active = true,
                             name = "Papitas clásicas 45g",
                             price = 1800.0,
@@ -302,7 +302,7 @@ namespace LibraryConnection.Migrations
                             id = 5,
                             category_id = 2,
                             description = "Bolsa de maní",
-                            image_url = "https://images.unsplash.com/photo-1601000924815-65f0f41cd3ed?w=800&q=80",
+                            image_url = "https://www.istockphoto.com/photo/roasted-salted-peanuts-in-bowl-on-wooden-table-gm2208003368-625205923?utm_source=unsplash&utm_medium=affiliate&utm_campaign=srp_photos_bottom&utm_content=https%3A%2F%2Funsplash.com%2Fes%2Fs%2Ffotos%2Froasted-peanuts-salted&utm_term=roasted+peanuts+salted%3A%3Alayout-below-fold-units-2%3Acontrol",
                             is_active = true,
                             name = "Maní salado 50g",
                             price = 1500.0,
@@ -313,7 +313,7 @@ namespace LibraryConnection.Migrations
                             id = 6,
                             category_id = 2,
                             description = "Con queso",
-                            image_url = "https://images.unsplash.com/photo-1604908554049-69a3a9c7f4ec?w=800&q=80",
+                            image_url = "https://unsplash.com/es/fotos/una-pizza-con-verduras-y-queso-RV4-buXKOS8",
                             is_active = true,
                             name = "Nachos 70g",
                             price = 2300.0,
@@ -324,7 +324,7 @@ namespace LibraryConnection.Migrations
                             id = 7,
                             category_id = 3,
                             description = "70% cacao",
-                            image_url = "https://images.unsplash.com/photo-1548907040-4b7d48268e8b?w=800&q=80",
+                            image_url = "https://unsplash.com/es/fotos/barra-de-chocolate-hersheys-sobre-superficie-blanca-7pvYgmkqOzc",
                             is_active = true,
                             name = "Chocolate barra 40g",
                             price = 2000.0,
@@ -335,7 +335,7 @@ namespace LibraryConnection.Migrations
                             id = 8,
                             category_id = 3,
                             description = "Frutales",
-                            image_url = "https://images.unsplash.com/photo-1589712230557-cf5f38f3d001?w=800&q=80",
+                            image_url = "https://unsplash.com/es/fotos/un-monton-de-caramelos-de-diferentes-colores-sobre-una-superficie-azul-1hRz-_MIwbk",
                             is_active = true,
                             name = "Gomitas 90g",
                             price = 1600.0,
@@ -345,12 +345,12 @@ namespace LibraryConnection.Migrations
                         {
                             id = 9,
                             category_id = 3,
-                            description = "Mix sabores",
-                            image_url = "https://images.unsplash.com/photo-1581323361970-989d7a9b6eb9?w=800&q=80",
+                            description = "Bandeja de cupcakes",
+                            image_url = "https://media.istockphoto.com/id/171360702/es/foto/vista-a%C3%A9rea-de-la-bandeja-con-cupcakes.webp?a=1&b=1&s=612x612&w=0&k=20&c=y9htsC84M1g1lu03oQYNBMIWqxMmWQr9_T7nGdk8hvA=",
                             is_active = true,
-                            name = "Caramelos surtidos 100g",
-                            price = 1500.0,
-                            stock = 150
+                            name = "Cupcakes surtidos",
+                            price = 1800.0,
+                            stock = 40
                         });
                 });
 

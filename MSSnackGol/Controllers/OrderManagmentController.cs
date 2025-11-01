@@ -1,4 +1,5 @@
 ﻿using LibraryConnection;
+using LibraryConnection.ControllerAzure;
 using LibraryConnection.Context;
 using LibraryConnection.Dtos;
 using LibraryEntities.Models;
@@ -101,8 +102,8 @@ namespace MSSnackGol.Controllers
         /// Realiza checkout del carrito actual (por sesión o usuario) sin requerir cédula.
         /// Reduce stock y vacía el carrito.
         /// </summary>
-        [HttpPost("Checkout")]
-        public IActionResult Checkout([FromBody] CheckoutRequest body)
+    [HttpPost("Checkout")]
+    public IActionResult Checkout([FromBody] LibraryEntities.Models.CheckoutRequest body)
         {
             try
             {
