@@ -1,0 +1,22 @@
+@model MSSnackGolFrontend.Models.SmartImageModel
+@{
+    var rawName = (Model?.name ?? string.Empty).Trim();
+    var nameLower = rawName.ToLowerInvariant();
+    var tags = new List<string>();
+    if (nameLower.Contains("agua") || nameLower.Contains("bebida") || nameLower.Contains("soda") || nameLower.Contains("cola")) tags.AddRange(new[] { "drink", "beverage", "bottle" });
+    if (nameLower.Contains("papita") || nameLower.Contains("papas") || nameLower.Contains("chips") || nameLower.Contains("snack") || nameLower.Contains("galleta") || nameLower.Contains("mani") || nameLower.Contains("maní")) tags.AddRange(new[] { "snack", "chips", "crisps" });
+    if (nameLower.Contains("chocolate") || nameLower.Contains("dulce") || nameLower.Contains("caramelo") || nameLower.Contains("gomita")) tags.AddRange(new[] { "candy", "chocolate" });
+    if (tags.Count == 0) tags.Add("snack");
+
+    var keyword = string.Join(",", new[] { rawName }.Concat(tags));
+    var img = Model?.image_url?.Trim();
+    var isAbsolute = Uri.TryCreate(img, UriKind.Absolute, out var parsed) && (parsed.Scheme == Uri.UriSchemeHttp || parsed.Scheme == Uri.UriSchemeHttps);
+    var w = Model?.width > 0 ? Model!.width : 400;
+    var h = Model?.height > 0 ? Model!.height : 300;
+    var c1 = isAbsolute ? img : $"https://source.unsplash.com/{w}x{h}/?{Uri.EscapeDataString(keyword)}";
+    var c2 = $"https://loremflickr.com/{w}/{h}/{Uri.EscapeDataString(keyword)}";
+    var cf = $"https://picsum.photos/seed/{Model!.id}/{w}/{h}";
+    var cls = string.IsNullOrWhiteSpace(Model?.cssClass) ? "" : Model!.cssClass;
+    var alt = string.IsNullOrWhiteSpace(Model?.alt) ? rawName : Model!.alt;
+}
+<img src="@c1" alt="@alt" class="@cls" onerror="if(!this.dataset.f){this.dataset.f=1;this.src='@c2';}else{this.onerror=null;this.src='@cf';}" referrerpolicy="no-referrer" />
