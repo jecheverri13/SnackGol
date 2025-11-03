@@ -1,0 +1,15 @@
+@model MSSnackGolFrontend.Models.FacturaViewModel
+@{
+    ViewData["Title"] = "Factura - Resumen de compra";
+}
+
+<h2>@ViewData["Title"]</h2>
+
+@await Html.PartialAsync("_FacturaSummary", Model)
+
+<div class="mt-3">
+    <a asp-controller="Carrito" asp-action="Index" class="btn btn-secondary">Volver al carrito</a>
+    <form asp-controller="Home" asp-action="Index" method="get" class="d-inline">
+        <button type="submit" class="btn btn-primary">Confirmar y finalizar</button>
+    </form>
+</div>

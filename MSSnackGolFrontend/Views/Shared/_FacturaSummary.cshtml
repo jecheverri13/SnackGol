@@ -1,0 +1,46 @@
+@model MSSnackGolFrontend.Models.FacturaViewModel
+
+<div class="factura-summary">
+    <h4>Factura: @Model.NumeroFactura</h4>
+    <p>Fecha: @Model.Fecha.ToString("g")</p>
+    @if (!string.IsNullOrWhiteSpace(Model.ClienteNombre) || !string.IsNullOrWhiteSpace(Model.Email))
+    {
+        <p>Cliente: @Model.ClienteNombre @if(!string.IsNullOrEmpty(Model.Email)){ <span>&lt;@Model.Email&gt;</span> }</p>
+    }
+
+    <table class="table table-sm">
+        <thead>
+            <tr>
+                <th>Producto</th>
+                <th class="text-end">Precio</th>
+                <th class="text-end">Cantidad</th>
+                <th class="text-end">Total</th>
+            </tr>
+        </thead>
+        <tbody>
+        @foreach(var it in Model.Items)
+        {
+            <tr>
+                <td>@it.Nombre</td>
+                <td class="text-end">@it.PrecioUnitario.ToString("C")</td>
+                <td class="text-end">@it.Cantidad</td>
+                <td class="text-end">@it.Total.ToString("C")</td>
+            </tr>
+        }
+        </tbody>
+        <tfoot>
+            <tr>
+                <td colspan="3" class="text-end"><strong>Subtotal</strong></td>
+                <td class="text-end">@Model.Subtotal.ToString("C")</td>
+            </tr>
+            <tr>
+                <td colspan="3" class="text-end">Impuesto</td>
+                <td class="text-end">@Model.Impuesto.ToString("C")</td>
+            </tr>
+            <tr>
+                <td colspan="3" class="text-end"><strong>Total</strong></td>
+                <td class="text-end"><strong>@Model.Total.ToString("C")</strong></td>
+            </tr>
+        </tfoot>
+    </table>
+</div>
