@@ -14,11 +14,8 @@
   <ItemGroup>
     <PackageReference Include="Microsoft.AspNetCore.Mvc.Razor.RuntimeCompilation" Version="8.0.10" />
   </ItemGroup>
-
   <ItemGroup>
-    <ProjectReference Include="..\LibraryAuthentication\LibraryAuthentication.csproj" />
     <ProjectReference Include="..\LibraryConnection\LibraryConnection.csproj" />
-    <ProjectReference Include="..\LibraryEncrypt\LibraryEncrypt.csproj" />
     <ProjectReference Include="..\LibraryEntities\LibraryEntities.csproj" />
   </ItemGroup>
 
