@@ -9,7 +9,7 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace LibraryConnection.Migrations
 {
     /// <inheritdoc />
-    public partial class Inicial : Migration
+    public partial class ActualizarModelo : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
