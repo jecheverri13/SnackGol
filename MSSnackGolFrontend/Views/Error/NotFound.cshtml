@@ -1,0 +1,33 @@
+@{
+    Layout = "_Layout"; // reuse existing layout
+    var status = ViewData["StatusCode"] ?? 404;
+}
+
+<main role="main" class="container py-5" aria-live="polite">
+    <div class="text-center">
+        <h1 class="display-1">404</h1>
+        <p class="lead">Lo sentimos — la página que buscas no se encuentra.</p>
+        <p>Estado: @status</p>
+
+        <form method="get" action="/Home/Search" class="d-flex justify-content-center mb-3" role="search" aria-label="Buscar productos">
+            <input name="q" class="form-control me-2" style="max-width:420px;" placeholder="Buscar productos..." aria-label="Buscar" />
+            <button class="btn btn-primary" type="submit">Buscar</button>
+        </form>
+
+        <p>
+            <a href="/" class="btn btn-outline-secondary me-2">Volver al inicio</a>
+            <a href="/Products" class="btn btn-outline-secondary">Ver productos</a>
+        </p>
+
+        <hr />
+
+        <h5>Ideas rápidas</h5>
+        <ul class="list-unstyled">
+            <li>Revisa el enlace que intentaste abrir.</li>
+            <li>Usa la búsqueda para encontrar productos similares.</li>
+            <li>Si crees que esto es un error, <a href="mailto:support@snackgol.local">contáctanos</a>.</li>
+        </ul>
+
+        <small class="text-muted">Si esto ocurre frecuentemente, por favor copia la URL y envíanosla para investigarlo.</small>
+    </div>
+</main>
