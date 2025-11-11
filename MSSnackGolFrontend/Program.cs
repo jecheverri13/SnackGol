@@ -33,6 +33,8 @@ if (!app.Environment.IsDevelopment())
     app.UseHsts();
     app.UseHttpsRedirection(); // Solo forzamos HTTPS en ambientes no desarrollo
 }
+// Show friendly pages for HTTP status codes (404, 403, etc.) by re-executing the request
+app.UseStatusCodePagesWithReExecute("/Error/NotFound", "?code={0}");
 app.UseStaticFiles();
 
 app.UseRouting();

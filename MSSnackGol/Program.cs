@@ -5,6 +5,7 @@ using Microsoft.OpenApi.Models;
 using System.Reflection;
 using Microsoft.EntityFrameworkCore;
 using LibraryConnection.Context;
+using MSSnackGol.Middleware;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -120,6 +121,9 @@ if (app.Environment.IsProduction())
 // Applying CORS policy before authentication and authorization middleware
 app.UseCors("AllowEverything");
 
+// Exception handling middleware (centralizado)
+app.UseMiddleware<ExceptionHandlingMiddleware>();
+
 app.UseRouting();
 app.UseAuthentication();
 app.UseAuthorization();
@@ -145,5 +149,7 @@ catch (Exception ex)
 }
 
 app.MapControllers();
+
+app.MapGet("/dev/throw", () => { throw new InvalidOperationException("Prueba middleware"); });
 
 app.Run();

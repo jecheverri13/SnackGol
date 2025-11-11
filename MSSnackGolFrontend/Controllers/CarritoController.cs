@@ -10,10 +10,12 @@ namespace MSSnackGolFrontend.Controllers
     public class CarritoController : Controller
     {
         private readonly IHttpClientFactory _httpClientFactory;
+        private readonly ILogger<CarritoController> _logger;
 
-        public CarritoController(IHttpClientFactory httpClientFactory)
+        public CarritoController(IHttpClientFactory httpClientFactory, ILogger<CarritoController> logger)
         {
             _httpClientFactory = httpClientFactory;
+            _logger = logger;
         }
 
         private string GetOrCreateSessionToken()
@@ -38,8 +40,102 @@ namespace MSSnackGolFrontend.Controllers
             var vm = new Models.CartPageViewModel();
             try
             {
-                var productsResp = await client.GetFromJsonAsync<Response<List<ProductDto>>>("api/ProductManagment/List");
-                vm.Products = productsResp?.response ?? new List<ProductDto>();
+                // Llamada manual para soportar dos shapes que la API podría devolver:
+                // 1) Response<List<ProductDto>> -> response = [ ... ]
+                // 2) Response<dynamic> con response = { items: [...], meta: {...} }
+                var http = await client.GetAsync("api/ProductManagment/List");
+                _logger.LogDebug("Product list request returned {StatusCode}", http.StatusCode);
+                if (http.IsSuccessStatusCode)
+                {
+                    var json = await http.Content.ReadAsStringAsync();
+                    _logger.LogDebug("Product list payload length: {Len}", json?.Length ?? 0);
+                    if (!string.IsNullOrWhiteSpace(json))
+                    {
+                        try
+                        {
+                            // Usar JsonDocument para inspeccionar la forma y mapear manualmente los items
+                            using var doc = System.Text.Json.JsonDocument.Parse(json);
+                            var root = doc.RootElement;
+                            System.Text.Json.JsonElement itemsEl = default;
+                            bool foundItems = false;
+
+                            if (root.ValueKind == System.Text.Json.JsonValueKind.Object && root.TryGetProperty("response", out var respEl))
+                            {
+                                // response can be array or object with items
+                                if (respEl.ValueKind == System.Text.Json.JsonValueKind.Array)
+                                {
+                                    itemsEl = respEl;
+                                    foundItems = true;
+                                }
+                                else if (respEl.ValueKind == System.Text.Json.JsonValueKind.Object && respEl.TryGetProperty("items", out var it))
+                                {
+                                    itemsEl = it;
+                                    foundItems = true;
+                                }
+                            }
+                            else if (root.ValueKind == System.Text.Json.JsonValueKind.Array)
+                            {
+                                itemsEl = root;
+                                foundItems = true;
+                            }
+
+                            if (foundItems && itemsEl.ValueKind == System.Text.Json.JsonValueKind.Array)
+                            {
+                                var list = new List<ProductDto>();
+                                foreach (var el in itemsEl.EnumerateArray())
+                                {
+                                    try
+                                    {
+                                        var p = new ProductDto
+                                        {
+                                            id = el.TryGetProperty("id", out var idEl) && idEl.ValueKind != System.Text.Json.JsonValueKind.Null ? idEl.GetInt32() : 0,
+                                            category_id = el.TryGetProperty("category_id", out var catEl) && catEl.ValueKind != System.Text.Json.JsonValueKind.Null ? catEl.GetInt32() : 0,
+                                            name = el.TryGetProperty("name", out var nameEl) && nameEl.ValueKind != System.Text.Json.JsonValueKind.Null ? nameEl.GetString() ?? string.Empty : string.Empty,
+                                            description = el.TryGetProperty("description", out var descEl) && descEl.ValueKind != System.Text.Json.JsonValueKind.Null ? descEl.GetString() : null,
+                                            price = el.TryGetProperty("price", out var priceEl) && priceEl.ValueKind != System.Text.Json.JsonValueKind.Null ? priceEl.GetDouble() : 0.0,
+                                            stock = el.TryGetProperty("stock", out var stockEl) && stockEl.ValueKind != System.Text.Json.JsonValueKind.Null ? stockEl.GetInt32() : 0,
+                                            image_url = el.TryGetProperty("image_url", out var imgEl) && imgEl.ValueKind != System.Text.Json.JsonValueKind.Null ? imgEl.GetString() : null,
+                                            is_active = el.TryGetProperty("is_active", out var activeEl) && activeEl.ValueKind == System.Text.Json.JsonValueKind.True
+                                        };
+                                        list.Add(p);
+                                    }
+                                    catch (Exception itemEx)
+                                    {
+                                        // log per-item parse issues and continue
+                                        _logger.LogWarning(itemEx, "Error parseando un producto dentro de items: {Snippet}", el.GetRawText().Length > 200 ? el.GetRawText().Substring(0, 200) + "…" : el.GetRawText());
+                                    }
+                                }
+                                vm.Products = list;
+                            }
+                            else
+                            {
+                                vm.Products = new List<ProductDto>();
+                                // log snippet to help debugging
+                                var snippet = json.Length > 1000 ? json.Substring(0, 1000) + "…" : json;
+                                _logger.LogWarning("No se encontraron items en la respuesta de productos. JSON snippet: {Snippet}", snippet);
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+                            // Log a capped snippet of the JSON to help diagnose schema mismatches
+                            var snippet = json?.Length > 1000 ? json.Substring(0, 1000) + "…" : json;
+                            _logger.LogWarning(ex, "Error procesando JSON de productos. JSON snippet: {Snippet}", snippet);
+                            vm.Products = new List<ProductDto>();
+                        }
+                    }
+                    else
+                    {
+                        vm.Products = new List<ProductDto>();
+                    }
+                }
+                else if (http.StatusCode == System.Net.HttpStatusCode.NoContent)
+                {
+                    vm.Products = new List<ProductDto>();
+                }
+                else
+                {
+                    vm.Products = new List<ProductDto>();
+                }
             }
             catch
             {
