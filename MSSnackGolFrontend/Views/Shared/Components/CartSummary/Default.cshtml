@@ -1,0 +1,9 @@
+@model MSSnackGolFrontend.Services.CartSummary
+
+<a class="cart-chip" asp-controller="Carrito" asp-action="Index" data-cart-count="@Model.Count">
+    <span class="cart-chip__icon"><i class="bi bi-bag-check"></i></span>
+    <span class="cart-chip__body">
+        <strong>@Model.Count</strong>
+        <span>@((Model.Total).ToString("C0", new System.Globalization.CultureInfo("es-CO")))</span>
+    </span>
+</a>

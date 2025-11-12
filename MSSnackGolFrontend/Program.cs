@@ -1,4 +1,6 @@
-﻿var builder = WebApplication.CreateBuilder(args);
+﻿using MSSnackGolFrontend.Services;
+
+var builder = WebApplication.CreateBuilder(args);
 
 // Servicios - EL ORDEN IMPORTA
 builder.Services.AddRazorPages();  // ← Esto PRIMERO
@@ -16,6 +18,8 @@ builder.Services.AddSession(options =>
     options.IdleTimeout = TimeSpan.FromDays(7);
     options.Cookie.HttpOnly = true;
 });
+builder.Services.AddHttpContextAccessor();
+builder.Services.AddScoped<CartSummaryService>();
 
 // HttpClient para el API Backend
 var apiBase = builder.Configuration["ApiBaseUrl"] ?? "http://localhost:5046";
@@ -33,6 +37,8 @@ if (!app.Environment.IsDevelopment())
     app.UseHsts();
     app.UseHttpsRedirection(); // Solo forzamos HTTPS en ambientes no desarrollo
 }
+// Show friendly pages for HTTP status codes (404, 403, etc.) by re-executing the request
+app.UseStatusCodePagesWithReExecute("/Error/NotFound", "?code={0}");
 app.UseStaticFiles();
 
 app.UseRouting();

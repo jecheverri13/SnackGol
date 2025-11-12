@@ -3,26 +3,55 @@
     ViewData["Title"] = "Carrito de Compras";
     Layout = "~/Views/Shared/_Layout.cshtml";
     var co = new System.Globalization.CultureInfo("es-CO");
+    var qrPayload = TempData["PickupQrPayload"] as string;
+    var pickupCode = TempData["PickupCode"] as string;
 }
 
-<div class="container my-4">
+<div class="container py-4 py-lg-5">
     @if (TempData["CartFlash"] is string flash && !string.IsNullOrWhiteSpace(flash))
     {
         <div class="alert alert-info">@flash</div>
     }
+    @if (!string.IsNullOrEmpty(qrPayload))
+    {
+        <div class="card border-success shadow-sm mb-4" data-pickup-card>
+            <div class="card-body d-flex flex-column flex-lg-row align-items-lg-center gap-4">
+                <div class="flex-grow-1">
+                    <span class="pill mb-2 d-inline-flex align-items-center gap-2"><i class="bi bi-qr-code-scan"></i> QR de entrega</span>
+                    <h4 class="fw-semibold mb-2">Presenta este código para reclamar tu pedido</h4>
+                    <p class="text-muted mb-1">Código de recogida: <span class="fw-semibold text-primary" data-pickup-code>@pickupCode</span></p>
+                    <p class="text-muted small mb-0">Guarda una captura o muestra el QR desde tu dispositivo al llegar al punto SnackGol.</p>
+                </div>
+                <div class="text-center">
+                    <div id="pickup-qr" class="bg-white p-3 rounded-3 shadow-sm d-inline-block"></div>
+                    <div class="small text-muted mt-2">Escanéalo con el personal autorizado</div>
+                </div>
+            </div>
+            <input type="hidden" id="pickup-qr-data" value="@qrPayload" />
+        </div>
+    }
     <!-- Encabezado del carrito -->
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <h2 class="mb-0">Tu Carrito de Compras</h2>
-        <a href="~/" class="btn btn-outline-primary">
-            <i class="bi bi-arrow-left"></i> Seguir comprando
-        </a>
+    <div class="d-flex flex-column flex-lg-row justify-content-between align-items-lg-center mb-4 gap-3">
+        <div>
+            <span class="pill mb-2"><i class="bi bi-bag"></i> Carrito activo</span>
+            <h2 class="section-title mb-0">Tu Carrito de Compras</h2>
+            <p class="text-muted mb-0">Gestiona cantidades, elimina productos o finaliza el pedido cuando estés listo.</p>
+        </div>
+        <div class="d-flex gap-2">
+            <a href="~/Producto" class="btn btn-outline-dark">
+                <i class="bi bi-shop me-2"></i>Explorar catálogo
+            </a>
+            <a href="~/" class="btn btn-outline-primary">
+                <i class="bi bi-arrow-left"></i> Seguir comprando
+            </a>
+        </div>
     </div>
 
     <div class="row">
         <div class="col-lg-8">
             <!-- Catálogo de productos -->
-            <div class="card shadow-sm mb-4">
-                <div class="card-header bg-light d-flex justify-content-between align-items-center">
+            <div class="card shadow-sm mb-4 border-0">
+                <div class="card-header bg-light border-0 py-3 d-flex justify-content-between align-items-center">
                     <h5 class="mb-0">Productos</h5>
                     <form asp-action="SampleData" method="post" class="m-0">
                         <button class="btn btn-sm btn-outline-secondary" title="Agrega algunos productos al carrito (solo desarrollo)">
@@ -36,9 +65,13 @@
                         <div class="row">
                             @foreach (var p in Model.Products)
                             {
+                                if (p is null)
+                                {
+                                    continue;
+                                }
                                 <div class="col-6 col-md-6 col-lg-4 mb-3">
                                     <div class="border rounded p-2 h-100 d-flex flex-column product-card">
-                                        <div class="product-img-wrapper rounded overflow-hidden mb-2 position-relative" style="height:200px;">
+                                        <div class="product-img-wrapper mb-2 position-relative">
                                             @{ 
                                                 var raw = p?.image_url?.Trim();
                                                 var placeholder = "https://via.placeholder.com/400x300?text=Sin+imagen";
@@ -74,11 +107,11 @@
                                             <img src="@finalImg" alt="@p.name" class="w-100 h-100 object-fit-cover" loading="lazy" onerror="this.onerror=null;this.src='https://via.placeholder.com/400x300?text=Sin+imagen';" referrerpolicy="no-referrer" />
                                             @if (p.stock == 0)
                                             {
-                                                <span class="badge bg-danger position-absolute top-0 start-0 m-2 shadow-sm">Agotado</span>
+                                                <span class="badge bg-danger badge-floating">Agotado</span>
                                             }
                                         </div>
                                         <div class="flex-fill">
-                                            <h6 class="mb-1">@p.name</h6>
+                                            <h6 class="mb-1 fw-semibold">@p.name</h6>
                                             @if (!string.IsNullOrWhiteSpace(p?.description))
                                             {
                                                 var clamp = p.description!.Length > 90 ? " line-clamp-2" : string.Empty;
@@ -107,8 +140,8 @@
             </div>
 
             <!-- Carrito actual -->
-            <div class="card shadow-sm mb-4">
-                <div class="card-header bg-light">
+            <div class="card shadow-sm mb-4 border-0">
+                <div class="card-header bg-light border-0 py-3">
                     <h5 class="mb-0">Tu carrito (@(Model.Cart?.count ?? 0) artículos)</h5>
                 </div>
                 <div class="card-body p-0">
@@ -196,55 +229,40 @@
 </div>
 
 @section Scripts {
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+    @if (!string.IsNullOrEmpty(qrPayload))
+    {
+        <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.0/build/qrcode.min.js"></script>
+        <script>
+            document.addEventListener("DOMContentLoaded", () => {
+                const dataInput = document.getElementById("pickup-qr-data");
+                const qrContainer = document.getElementById("pickup-qr");
+                const codeLabel = document.querySelector("[data-pickup-code]");
 
-    <style>
-        .sticky-top {
-            position: -webkit-sticky;
-            position: sticky;
-            z-index: 1020;
-        }
-        /* Productos: tarjetas más visuales */
-        .product-card {
-            transition: transform .15s ease, box-shadow .15s ease;
-        }
-        .product-card:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 0.75rem 1.5rem rgba(0,0,0,.08);
-        }
-        .product-img-wrapper img {
-            transition: transform .2s ease;
-        }
-        .product-card:hover .product-img-wrapper img {
-            transform: scale(1.05);
-        }
-        /* Ítems del carrito visualmente separados */
-        .cart-item {
-            border: 1px solid var(--bs-border-color, #dee2e6);
-        }
-        /* Botón de icono pequeño y cuadrado */
-        .btn-icon-sm {
-            --size: 32px;
-            width: var(--size);
-            height: var(--size);
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            padding: 0;
-        }
-        .line-clamp-2 {
-            display: -webkit-box;
-            -webkit-line-clamp: 2;
-            -webkit-box-orient: vertical;
-            overflow: hidden;
-        }
-        /* Sticky mejorado para que no se vea pegado */
-        .summary-sticky {
-            box-shadow: 0 0.5rem 1rem rgba(0,0,0,.06);
-        }
-        /* Barra móvil fija: respeta área segura */
-        .mobile-checkout-bar {
-            padding-bottom: calc(env(safe-area-inset-bottom) + 0.5rem);
-        }
-    </style>
+                if (!dataInput || !qrContainer || !window.QRCode) {
+                    return;
+                }
+
+                try {
+                    const decoded = atob(dataInput.value);
+                    const parsed = JSON.parse(decoded);
+
+                    if (parsed?.code && codeLabel) {
+                        codeLabel.textContent = parsed.code;
+                    }
+
+                    const canvas = document.createElement("canvas");
+                    QRCode.toCanvas(canvas, decoded, { width: 180, errorCorrectionLevel: "M", margin: 1 }, (error) => {
+                        if (error) {
+                            console.error("No se pudo generar el código QR", error);
+                            return;
+                        }
+                        qrContainer.innerHTML = "";
+                        qrContainer.appendChild(canvas);
+                    });
+                } catch (error) {
+                    console.error("No se pudo preparar el QR de entrega", error);
+                }
+            });
+        </script>
+    }
 }
