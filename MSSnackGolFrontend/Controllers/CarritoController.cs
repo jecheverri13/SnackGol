@@ -5,6 +5,7 @@ using System.Net.Http;
 using System.Net.Http.Json;
 using System.Text;
 using System.Text.Json;
+using System.Text.Json;
 
 namespace MSSnackGolFrontend.Controllers
 {
@@ -342,6 +343,34 @@ namespace MSSnackGolFrontend.Controllers
             {
                 return string.Empty;
             }
+        }
+
+        [HttpPost]
+        public async Task<IActionResult> ProcederPago()
+        {
+            // Obtener carrito actual desde la API usando la misma sesión
+            var token = GetOrCreateSessionToken();
+            var client = _httpClientFactory.CreateClient("Api");
+            client.DefaultRequestHeaders.Remove("X-Session-Token");
+            client.DefaultRequestHeaders.Add("X-Session-Token", token);
+
+            var vm = new Models.CartPageViewModel();
+            try
+            {
+                var cartHttp = await client.GetAsync("api/CartManagment");
+                if (cartHttp.IsSuccessStatusCode)
+                {
+                    var cartResp = await cartHttp.Content.ReadFromJsonAsync<Response<CartDto>>();
+                    vm.Cart = cartResp?.response ?? vm.Cart;
+                }
+            }
+            catch
+            {
+                // ignorar errores de obtención del carrito; mostrar factura vacía
+            }
+
+            TempData["CartJson"] = JsonSerializer.Serialize(vm);
+            return RedirectToAction("Index", "Factura");
         }
     }
 }
