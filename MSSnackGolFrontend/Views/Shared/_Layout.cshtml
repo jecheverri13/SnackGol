@@ -34,7 +34,7 @@
                 <div class="collapse navbar-collapse" id="mainNavbar">
                     <ul class="navbar-nav ms-auto align-items-lg-center gap-lg-2">
                         <li class="nav-item">
-                            <a class="nav-link@isActive("Home", "Index")" asp-area="" asp-controller="Home" asp-action="Index">Inicio</a>
+                            <a class="nav-link" href="/">Inicio</a>
                         </li>
                         <li class="nav-item">
                             <a class="nav-link@(controller.Equals("Producto", StringComparison.OrdinalIgnoreCase) ? " active" : string.Empty)" asp-area="" asp-controller="Producto" asp-action="Index">Catálogo</a>

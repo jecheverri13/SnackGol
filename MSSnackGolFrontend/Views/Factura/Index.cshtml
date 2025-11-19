@@ -3,13 +3,21 @@
     ViewData["Title"] = "Factura - Resumen de compra";
 }
 
-<h2>@ViewData["Title"]</h2>
+<div class="container py-4 py-lg-5">
+    <div class="row justify-content-center">
+        <div class="col-12 col-lg-10 col-xl-8">
+            <h2 class="mb-3">@ViewData["Title"]</h2>
+            <p class="text-muted mb-4">Revisa los detalles de tu compra antes de confirmar el pedido. Una vez confirmado, te mostraremos un código QR para que el equipo de cocina pueda verificar tu orden al momento de recojo.</p>
 
-@await Html.PartialAsync("_FacturaSummary", Model)
+            @await Html.PartialAsync("_FacturaSummary", Model)
 
-<div class="mt-3">
-    <a asp-controller="Carrito" asp-action="Index" class="btn btn-secondary">Volver al carrito</a>
-    <form asp-controller="Home" asp-action="Index" method="get" class="d-inline">
-        <button type="submit" class="btn btn-primary">Confirmar y finalizar</button>
-    </form>
+            <div class="d-flex flex-column flex-md-row gap-2 mt-4">
+                <a asp-controller="Carrito" asp-action="Index" class="btn btn-outline-secondary flex-fill flex-md-grow-0">Volver al carrito</a>
+                <form asp-controller="Carrito" asp-action="Checkout" method="post" class="d-inline flex-fill flex-md-grow-1">
+                    <button type="submit" class="btn btn-primary w-100">Confirmar pedido y generar QR</button>
+                </form>
+            </div>
+            <p class="small text-muted mt-3">Al confirmar aceptas que el pedido será enviado a cocina. Recibirás un código QR único para presentarlo al retirar.</p>
+        </div>
+    </div>
 </div>

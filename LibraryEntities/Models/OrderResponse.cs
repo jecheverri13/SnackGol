@@ -28,9 +28,17 @@ namespace LibraryEntities.Models
         public double total_gross_amount { get; set; }
         [Required]
         public double total_net_price { get; set; }
+        public string? status { get; set; }
         public string? cufe { get; set; }
         public string? url { get; set; }
         public int? doc_entry_sap { get; set; }
+
+        public string? pickup_code { get; set; }
+        public string? pickup_payload_base64 { get; set; }
+        public string? pickup_qr_base64 { get; set; }
+        public DateTime? pickup_generated_at { get; set; }
+        public DateTime? pickup_redeemed_at { get; set; }
+        public string? pickup_verified_by { get; set; }
 
         public List<OrderLineResponse>? OrderLines { get; set; }
     }

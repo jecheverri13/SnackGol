@@ -1,0 +1,198 @@
+@model MSSnackGolFrontend.Models.CheckoutConfirmationViewModel
+@{
+    ViewData["Title"] = "Pedido confirmado";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+    var qrImage = Model.Pickup?.QrImageBase64;
+    var qrPayload = Model.Pickup?.PayloadBase64;
+    var pickupCode = string.IsNullOrWhiteSpace(Model.Pickup?.Code) ? "Pendiente" : Model.Pickup?.Code;
+    var status = string.IsNullOrWhiteSpace(Model.Status) ? "Confirmado" : Model.Status;
+    var flash = ViewBag.CheckoutFlash as string;
+}
+
+<div class="container py-4 py-lg-5">
+    <div class="row justify-content-center">
+        <div class="col-12 col-lg-10 col-xl-8">
+            <div class="card shadow-sm border-0 confirmation-card">
+                <div class="card-body p-4 p-lg-5">
+                    <div class="d-flex flex-column flex-md-row align-items-center align-items-md-start gap-4">
+                        <div class="flex-fill text-center text-md-start">
+                            <span class="pill mb-2 d-inline-flex align-items-center gap-2 text-success"><i class="bi bi-check-circle-fill"></i> Pedido confirmado</span>
+                            <h1 class="h3 h-md-2 fw-semibold mb-3">Tu orden está en preparación</h1>
+                            <p class="text-muted mb-3">Presenta este código QR al personal de SnackGol cuando te acerques a recoger tu pedido. Ellos escanearán el código para validar la entrega.</p>
+                            <div class="d-flex flex-wrap gap-3 text-start">
+                                <div class="order-detail">
+                                    <span class="label">Orden</span>
+                                    <span class="value">@(!string.IsNullOrWhiteSpace(Model.OrderId) ? Model.OrderId : "Pendiente")</span>
+                                </div>
+                                <div class="order-detail">
+                                    <span class="label">Código de recogida</span>
+                                    <span class="value" data-pickup-code>@pickupCode</span>
+                                </div>
+                                <div class="order-detail">
+                                    <span class="label">Estado</span>
+                                    <span class="value">@status</span>
+                                </div>
+                                <div class="order-detail">
+                                    <span class="label">Total</span>
+                                    <span class="value">@Model.Total.ToString("C0", new System.Globalization.CultureInfo("es-CO"))</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="qr-wrapper text-center w-100 w-md-auto">
+                            @if (!string.IsNullOrWhiteSpace(qrImage))
+                            {
+                                <img src="data:image/png;base64,@qrImage" alt="Código QR del pedido" class="qr-image shadow-sm" loading="lazy" decoding="async" />
+                            }
+                            else
+                            {
+                                <div id="generated-qr" class="qr-image shadow-sm d-flex justify-content-center align-items-center">
+                                    <span class="text-muted small">Generando QR…</span>
+                                </div>
+                            }
+                            <div class="small text-muted mt-2">Mantén la pantalla en brillo alto para facilitar el escaneo.</div>
+                        </div>
+                    </div>
+
+                    <div class="row mt-4 g-3">
+                        <div class="col-12 col-md-6">
+                            <div class="info-tile">
+                                <h3 class="h6 fw-semibold mb-1">¿Dónde presentarlo?</h3>
+                                <p class="text-muted mb-0">Dirígete al módulo de cocina SnackGol y muestra este QR al staff. Ellos verificarán tu pedido antes de entregarlo.</p>
+                            </div>
+                        </div>
+                        <div class="col-12 col-md-6">
+                            <div class="info-tile">
+                                <h3 class="h6 fw-semibold mb-1">Recuerda</h3>
+                                <p class="text-muted mb-0">Puedes reenviar el código a otra persona. Si cerraste esta página, siempre podrás obtener tu QR desde el panel de pedidos.</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="d-flex flex-column flex-sm-row gap-2 mt-4">
+                        <a asp-controller="Home" asp-action="Index" class="btn btn-outline-secondary flex-fill flex-sm-grow-0">Volver al inicio</a>
+                        <a asp-controller="Carrito" asp-action="Index" class="btn btn-secondary flex-fill flex-sm-grow-0">Ver carrito</a>
+                        <a asp-controller="Home" asp-action="Index" class="btn btn-outline-secondary d-none d-md-inline-flex">Ver catálogo</a>
+                    </div>
+                </div>
+            </div>
+
+            @if (!string.IsNullOrWhiteSpace(flash))
+            {
+                <div class="alert alert-success mt-3" role="alert">@flash</div>
+            }
+        </div>
+    </div>
+</div>
+
+@section Styles {
+    <style>
+        .confirmation-card .order-detail {
+            display: flex;
+            flex-direction: column;
+            min-width: 140px;
+        }
+        .confirmation-card .order-detail .label {
+            font-size: .75rem;
+            text-transform: uppercase;
+            color: #6c757d;
+            letter-spacing: .04em;
+        }
+        .confirmation-card .order-detail .value {
+            font-weight: 600;
+            font-size: 1rem;
+        }
+        .confirmation-card .qr-wrapper {
+            max-width: 420px; /* increase for larger screens */
+        }
+        .confirmation-card .qr-image {
+            width: 100%;
+            max-width: 320px; /* increased value */
+            border-radius: 1rem;
+            background-color: #fff;
+            padding: 1.25rem;
+        }
+        .info-tile {
+            background-color: #f8f9fa;
+            border-radius: 1rem;
+            padding: 1.25rem;
+            height: 100%;
+        }
+        @@media (max-width: 992px) {
+            .confirmation-card .qr-image {
+                max-width: 260px;
+            }
+        }
+        @@media (max-width: 768px) {
+            .confirmation-card .card-body {
+                padding: 2rem 1.5rem !important;
+            }
+            .confirmation-card .order-detail {
+                min-width: unset;
+            }
+            .confirmation-card .qr-image {
+                max-width: 180px; /* smaller for mobile */
+                margin: 0 auto;
+            }
+        }
+    </style>
+}
+
+@section Scripts {
+    @if (string.IsNullOrWhiteSpace(qrImage) && !string.IsNullOrWhiteSpace(qrPayload))
+    {
+        <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.0/build/qrcode.min.js"></script>
+        <script>
+            document.addEventListener("DOMContentLoaded", () => {
+                const payload = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(qrPayload ?? string.Empty));
+                const fallback = document.getElementById("generated-qr");
+                const codeLabel = document.querySelector("[data-pickup-code]");
+
+                if (!payload || !fallback || !window.QRCode) {
+                    return;
+                }
+
+                try {
+                    const decoded = atob(payload);
+                    const parsed = JSON.parse(decoded);
+                    if (parsed?.code && codeLabel) {
+                        codeLabel.textContent = parsed.code;
+                    }
+
+                    // Dynamic width based on viewport
+                    const computeWidth = () => {
+                        const vw = Math.max(document.documentElement.clientWidth || 0, window.innerWidth || 0);
+                        const desired = Math.floor(vw * 0.45); // 45% of viewport
+                        return Math.min(320, Math.max(120, desired));
+                    };
+
+                    const canvas = document.createElement("canvas");
+                    QRCode.toCanvas(canvas, decoded, { width: computeWidth(), errorCorrectionLevel: "M", margin: 1 }, (error) => {
+                        if (error) {
+                            console.error("No se pudo generar el código QR", error);
+                            return;
+                        }
+                        canvas.classList.add("w-100");
+                        fallback.innerHTML = "";
+                        fallback.appendChild(canvas);
+                    });
+
+                    // Recompute on resize
+                    let resizeTimer = null;
+                    window.addEventListener('resize', () => {
+                        if (resizeTimer) window.clearTimeout(resizeTimer);
+                        resizeTimer = window.setTimeout(() => {
+                            QRCode.toCanvas(canvas, decoded, { width: computeWidth(), errorCorrectionLevel: "M", margin: 1 }, (error) => {
+                                if (error) {
+                                    console.error("No se pudo actualizar el tamaño del QR", error);
+                                    return;
+                                }
+                            });
+                        }, 150);
+                    });
+                } catch (error) {
+                    console.error("No se pudo preparar el QR de entrega", error);
+                }
+            });
+        </script>
+    }
+}

@@ -19,6 +19,15 @@ namespace LibraryConnection.DbSet
         public double total_gross_amount { get; set; }
         [Required]
         public double total_net_price { get; set; }
+
+        public string? pickup_code { get; set; }
+        public string? pickup_token_hash { get; set; }
+        public string? pickup_payload_base64 { get; set; }
+        public string? pickup_qr_base64 { get; set; }
+        public DateTime? pickup_generated_at { get; set; }
+        public DateTime? pickup_redeemed_at { get; set; }
+        public string? pickup_verified_by { get; set; }
+
         public Client client { get; set; }
         public ICollection<OrderLine> OrderLines { get; set; }
     }

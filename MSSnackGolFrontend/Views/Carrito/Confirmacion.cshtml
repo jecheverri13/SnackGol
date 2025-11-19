@@ -1,0 +1,17 @@
+@{
+    // This view has been moved to ~/Views/QR/Confirmacion.cshtml.
+    // Keep this page as a redirect target for old routes using a meta refresh fallback.
+    var redirect = Url.Action("Confirmacion", "QR");
+}
+<!DOCTYPE html>
+<html>
+<head>
+    <meta http-equiv="refresh" content="0;url=@redirect" />
+    <script>window.location = '@redirect';</script>
+    <title>Redirigiendo...</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+</head>
+<body>
+    <p>Redirigiendo al nuevo panel de confirmación… <a href="@redirect">Haz clic aquí si no te redirige automáticamente</a>.</p>
+</body>
+</html>

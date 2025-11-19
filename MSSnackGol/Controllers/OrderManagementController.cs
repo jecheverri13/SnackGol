@@ -1,11 +1,18 @@
-﻿using LibraryConnection;
-using LibraryConnection.ControllerAzure;
+﻿using LibraryConnection.ControllerAzure;
 using LibraryConnection.Context;
 using LibraryConnection.Dtos;
+using LibraryConnection.DbSet;
 using LibraryEntities.Models;
 using Microsoft.AspNetCore.Mvc;
 using System.Net;
 using Microsoft.EntityFrameworkCore;
+using System.Globalization;
+using System.Security.Cryptography;
+using System.Text;
+using System.Text.Json;
+using System.Linq;
+using QRCoder;
+
 namespace MSSnackGol.Controllers
 {
     [Route("api/[controller]")]
@@ -13,6 +20,13 @@ namespace MSSnackGol.Controllers
     public class OrderManagementController : ControllerBase
     {
         private readonly ILogger<OrderManagementController> _logger;
+        private static readonly JsonSerializerOptions PickupJsonOptions = new(JsonSerializerDefaults.Web)
+        {
+            PropertyNameCaseInsensitive = true
+        };
+
+        private const string StatusReadyForPickup = "ReadyForPickup";
+        private const string StatusDelivered = "Delivered";
 
         public OrderManagementController(ILogger<OrderManagementController> logger)
         {
@@ -99,24 +113,38 @@ namespace MSSnackGol.Controllers
         }
         
         /// <summary>
-        /// Realiza checkout del carrito actual (por sesión o usuario) sin requerir cédula.
-        /// Reduce stock y vacía el carrito.
+        /// Realiza el checkout del carrito actual, genera la orden y prepara el QR de retiro.
         /// </summary>
-    [HttpPost("Checkout")]
-    public IActionResult Checkout([FromBody] LibraryEntities.Models.CheckoutRequest body)
+        [HttpPost("Checkout")]
+        public IActionResult Checkout([FromBody] LibraryEntities.Models.CheckoutRequest body)
         {
             try
             {
                 using var db = new ApplicationDbContext();
 
-                var session = body?.session_token;
-                var userId = User?.Identity?.IsAuthenticated == true ? (long?)Convert.ToInt64(User.Identity!.Name) : null;
+                var session = body?.session_token?.Trim();
+                long? userId = null;
+
+                if (User?.Identity?.IsAuthenticated == true && !string.IsNullOrWhiteSpace(User.Identity!.Name))
+                {
+                    if (long.TryParse(User.Identity.Name, NumberStyles.Integer, CultureInfo.InvariantCulture, out var parsedUserId))
+                    {
+                        userId = parsedUserId;
+                    }
+                }
+
+                if (userId is null && string.IsNullOrWhiteSpace(session))
+                {
+                    return StatusCode((int)HttpStatusCode.BadRequest, new Response<dynamic>(false, HttpStatusCode.BadRequest, "No se pudo identificar la sesión del carrito"));
+                }
 
                 var cart = db.carts
-                    .FirstOrDefault(c => (userId != null && c.user_id == userId) || (session != null && c.session_token == session));
+                    .FirstOrDefault(c => (userId != null && c.user_id == userId) || (!string.IsNullOrWhiteSpace(session) && c.session_token == session));
 
                 if (cart == null)
+                {
                     return StatusCode((int)HttpStatusCode.NotFound, new Response<dynamic>(false, HttpStatusCode.NotFound, "Carrito no encontrado"));
+                }
 
                 var items = db.cart_items
                     .Include(i => i.Product)
@@ -124,13 +152,16 @@ namespace MSSnackGol.Controllers
                     .ToList();
 
                 if (items.Count == 0)
+                {
                     return StatusCode((int)HttpStatusCode.BadRequest, new Response<dynamic>(false, HttpStatusCode.BadRequest, "Carrito vacío"));
+                }
 
-                // Validar y descontar stock
                 foreach (var it in items)
                 {
                     if (it.Product.stock < it.quantity)
+                    {
                         return StatusCode((int)HttpStatusCode.Conflict, new Response<dynamic>(false, HttpStatusCode.Conflict, $"Stock insuficiente para {it.Product.name}"));
+                    }
                 }
 
                 foreach (var it in items)
@@ -138,13 +169,67 @@ namespace MSSnackGol.Controllers
                     it.Product.stock -= it.quantity;
                 }
 
-                // Vaciar carrito
+                var total = items.Sum(it => it.subtotal);
+                var customerId = userId?.ToString(CultureInfo.InvariantCulture) ?? session!;
+
+                EnsureClientRecord(db, customerId, userId);
+
+                var orderId = GenerateOrderId();
+                var order = new Order
+                {
+                    order_id = orderId,
+                    customer_id = customerId,
+                    order_date = DateTime.UtcNow,
+                    status = StatusReadyForPickup,
+                    total_gross_amount = total,
+                    total_net_price = total,
+                    OrderLines = items.Select((it, index) => new OrderLine
+                    {
+                        lineNum = index + 1,
+                        item = it.product_id.ToString(CultureInfo.InvariantCulture),
+                        description = it.Product?.name,
+                        gross_amount = it.subtotal,
+                        net_price = it.subtotal,
+                        tax_amount = 0,
+                        quantity = it.quantity
+                    }).ToList()
+                };
+
+                var pickupCode = GeneratePickupCode();
+                var artifacts = BuildPickupArtifacts(orderId, pickupCode, session);
+
+                order.pickup_code = pickupCode;
+                order.pickup_token_hash = HashToken(artifacts.Token);
+                order.pickup_payload_base64 = artifacts.PayloadBase64;
+                order.pickup_qr_base64 = artifacts.QrImageBase64;
+                order.pickup_generated_at = DateTime.UtcNow;
+
+                db.orders.Add(order);
+
                 db.cart_items.RemoveRange(items);
                 cart.updated_at = DateTime.UtcNow;
 
                 db.SaveChanges();
 
-                return StatusCode((int)HttpStatusCode.Created, new Response<dynamic>(true, HttpStatusCode.Created, new { message = "Checkout completado" }));
+                var pickupInfo = new PickupInfoResponse
+                {
+                    orderId = orderId,
+                    pickupCode = pickupCode,
+                    pickupPayloadBase64 = order.pickup_payload_base64,
+                    pickupQrImageBase64 = order.pickup_qr_base64,
+                    generatedAtUtc = order.pickup_generated_at,
+                    status = order.status
+                };
+
+                var result = new CheckoutResult
+                {
+                    orderId = orderId,
+                    status = order.status ?? StatusReadyForPickup,
+                    total = total,
+                    pickup = pickupInfo
+                };
+
+                return StatusCode((int)HttpStatusCode.Created, new Response<dynamic>(true, HttpStatusCode.Created, result));
             }
             catch (Exception ex)
             {
@@ -153,6 +238,177 @@ namespace MSSnackGol.Controllers
                 return StatusCode((int)HttpStatusCode.InternalServerError, new Response<dynamic>(false, HttpStatusCode.InternalServerError, errorMessage, ex.Message));
             }
         }
+
+        /// <summary>
+        /// Obtiene la información del QR de entrega para una orden.
+        /// </summary>
+        [HttpGet("{orderId}/pickup")]
+        public IActionResult GetPickup(string orderId)
+        {
+            try
+            {
+                using var db = new ApplicationDbContext();
+                var order = db.orders.AsNoTracking().FirstOrDefault(o => o.order_id == orderId);
+
+                if (order == null)
+                {
+                    return StatusCode((int)HttpStatusCode.NotFound, new Response<dynamic>(false, HttpStatusCode.NotFound, "Orden no encontrada"));
+                }
+
+                if (string.IsNullOrWhiteSpace(order.pickup_code) || string.IsNullOrWhiteSpace(order.pickup_payload_base64))
+                {
+                    return StatusCode((int)HttpStatusCode.NotFound, new Response<dynamic>(false, HttpStatusCode.NotFound, "La orden no tiene QR de retiro disponible"));
+                }
+
+                var pickupInfo = new PickupInfoResponse
+                {
+                    orderId = order.order_id,
+                    pickupCode = order.pickup_code,
+                    pickupPayloadBase64 = order.pickup_payload_base64,
+                    pickupQrImageBase64 = order.pickup_qr_base64,
+                    generatedAtUtc = order.pickup_generated_at,
+                    deliveredAtUtc = order.pickup_redeemed_at,
+                    status = order.status
+                };
+
+                return StatusCode((int)HttpStatusCode.OK, new Response<dynamic>(true, HttpStatusCode.OK, pickupInfo));
+            }
+            catch (Exception ex)
+            {
+                const string errorMessage = "Error al obtener el QR de entrega";
+                _logger.LogError(ex, "{ErrorMessage}", errorMessage);
+                return StatusCode((int)HttpStatusCode.InternalServerError, new Response<dynamic>(false, HttpStatusCode.InternalServerError, errorMessage, ex.Message));
+            }
+        }
+
+        /// <summary>
+        /// Valida el token escaneado en el punto de entrega y marca la orden como entregada.
+        /// </summary>
+        [HttpPost("{orderId}/pickup/validate")]
+        public IActionResult ValidatePickup(string orderId, [FromBody] PickupValidationRequest request)
+        {
+            if (request == null || string.IsNullOrWhiteSpace(request.token))
+            {
+                return StatusCode((int)HttpStatusCode.BadRequest, new Response<dynamic>(false, HttpStatusCode.BadRequest, "Token de validación requerido"));
+            }
+
+            try
+            {
+                using var db = new ApplicationDbContext();
+                var order = db.orders.FirstOrDefault(o => o.order_id == orderId);
+
+                if (order == null)
+                {
+                    return StatusCode((int)HttpStatusCode.NotFound, new Response<dynamic>(false, HttpStatusCode.NotFound, "Orden no encontrada"));
+                }
+
+                if (string.IsNullOrWhiteSpace(order.pickup_token_hash))
+                {
+                    return StatusCode((int)HttpStatusCode.NotFound, new Response<dynamic>(false, HttpStatusCode.NotFound, "La orden no tiene un token de retiro activo"));
+                }
+
+                if (!HashToken(request.token!).Equals(order.pickup_token_hash, StringComparison.OrdinalIgnoreCase))
+                {
+                    return StatusCode((int)HttpStatusCode.Forbidden, new Response<dynamic>(false, HttpStatusCode.Forbidden, "Token inválido para esta orden"));
+                }
+
+                if (order.pickup_redeemed_at != null)
+                {
+                    return StatusCode((int)HttpStatusCode.Conflict, new Response<dynamic>(false, HttpStatusCode.Conflict, "La orden ya fue marcada como entregada"));
+                }
+
+                order.pickup_redeemed_at = DateTime.UtcNow;
+                order.pickup_verified_by = string.IsNullOrWhiteSpace(request.verified_by) ? null : request.verified_by;
+                order.status = StatusDelivered;
+
+                db.SaveChanges();
+
+                var pickupInfo = new PickupInfoResponse
+                {
+                    orderId = order.order_id,
+                    pickupCode = order.pickup_code,
+                    pickupPayloadBase64 = order.pickup_payload_base64,
+                    pickupQrImageBase64 = order.pickup_qr_base64,
+                    generatedAtUtc = order.pickup_generated_at,
+                    deliveredAtUtc = order.pickup_redeemed_at,
+                    status = order.status
+                };
+
+                return StatusCode((int)HttpStatusCode.OK, new Response<dynamic>(true, HttpStatusCode.OK, pickupInfo));
+            }
+            catch (Exception ex)
+            {
+                const string errorMessage = "Error al validar el QR de entrega";
+                _logger.LogError(ex, "{ErrorMessage}", errorMessage);
+                return StatusCode((int)HttpStatusCode.InternalServerError, new Response<dynamic>(false, HttpStatusCode.InternalServerError, errorMessage, ex.Message));
+            }
+        }
+
+        private static void EnsureClientRecord(ApplicationDbContext db, string customerId, long? userId)
+        {
+            var client = db.clients.FirstOrDefault(c => c.document == customerId);
+            if (client != null)
+            {
+                return;
+            }
+
+            string? name = null;
+            string? email = null;
+
+            if (userId != null)
+            {
+                var user = db.users.FirstOrDefault(u => u.id == userId);
+                if (user != null)
+                {
+                    name = $"{user.name} {user.last_name}".Trim();
+                    email = user.email;
+                }
+            }
+
+            client = new Client
+            {
+                document = customerId,
+                name = string.IsNullOrWhiteSpace(name) ? "Invitado SnackGol" : name,
+                emailAddress = email,
+                docType = userId != null ? "USER" : "SESSION",
+                status = "ACTIVE"
+            };
+
+            db.clients.Add(client);
+        }
+
+        private static string GenerateOrderId()
+        {
+            return $"ORD-{DateTime.UtcNow:yyyyMMddHHmmss}-{RandomNumberGenerator.GetInt32(1000, 9999)}";
+        }
+
+        private static string GeneratePickupCode()
+        {
+            return $"SG-{DateTime.UtcNow:yyMMddHHmmss}-{RandomNumberGenerator.GetInt32(1000, 9999)}";
+        }
+
+        private static string HashToken(string token)
+        {
+            var bytes = SHA256.HashData(Encoding.UTF8.GetBytes(token));
+            return Convert.ToHexString(bytes);
+        }
+
+        private static (string Token, string PayloadBase64, string QrImageBase64) BuildPickupArtifacts(string orderId, string pickupCode, string? sessionToken)
+        {
+            var token = Convert.ToHexString(RandomNumberGenerator.GetBytes(16));
+            var payload = new PickupPayload(orderId, pickupCode, token, sessionToken, DateTime.UtcNow);
+            var payloadJson = JsonSerializer.Serialize(payload, PickupJsonOptions);
+            var payloadBase64 = Convert.ToBase64String(Encoding.UTF8.GetBytes(payloadJson));
+
+            var qrGenerator = new QRCodeGenerator();
+            var qrData = qrGenerator.CreateQrCode(payloadJson, QRCodeGenerator.ECCLevel.M);
+            var pngQr = new PngByteQRCode(qrData).GetGraphic(20);
+            var qrImageBase64 = Convert.ToBase64String(pngQr);
+
+            return (token, payloadBase64, qrImageBase64);
+        }
+
+        private record PickupPayload(string OrderId, string PickupCode, string Token, string? SessionToken, DateTime GeneratedAtUtc);
     }
 }
-    
+

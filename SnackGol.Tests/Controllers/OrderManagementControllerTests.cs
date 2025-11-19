@@ -10,6 +10,7 @@ using MSSnackGol.Controllers;
 using SnackGol.Tests.Utilities;
 using Xunit;
 using Microsoft.EntityFrameworkCore;
+using LibraryEntities.Models;
 
 namespace SnackGol.Tests.Controllers;
 
@@ -72,9 +73,28 @@ public class OrderManagementControllerTests
         result.Should().NotBeNull();
         result!.StatusCode.Should().Be((int)HttpStatusCode.Created);
 
+        var envelope = result.Value as Response<dynamic>;
+        envelope.Should().NotBeNull();
+        envelope!.success.Should().BeTrue();
+
+        var checkoutResult = envelope.response as CheckoutResult;
+        checkoutResult.Should().NotBeNull();
+        checkoutResult!.orderId.Should().NotBeNullOrWhiteSpace();
+        checkoutResult.pickup.Should().NotBeNull();
+        checkoutResult.pickup!.pickupCode.Should().NotBeNullOrWhiteSpace();
+        checkoutResult.pickup.pickupQrImageBase64.Should().NotBeNullOrWhiteSpace();
+
         using var verify = new ApplicationDbContext();
         var cartVerify = verify.carts.Single(c => c.session_token == "sess-ok");
         verify.cart_items.Where(ci => ci.cart_id == cartVerify.id).Any().Should().BeFalse();
         verify.products.Single(x => x.name == "Agua_UnitTest").stock.Should().Be(3); // 5 - 2
+
+        var storedOrder = verify.orders.Include(o => o.OrderLines).Single(o => o.order_id == checkoutResult.orderId);
+        storedOrder.status.Should().Be("ReadyForPickup");
+        storedOrder.pickup_code.Should().NotBeNullOrWhiteSpace();
+        storedOrder.pickup_token_hash.Should().NotBeNullOrWhiteSpace();
+        storedOrder.pickup_payload_base64.Should().NotBeNullOrWhiteSpace();
+        storedOrder.pickup_qr_base64.Should().NotBeNullOrWhiteSpace();
+        storedOrder.OrderLines.Should().HaveCount(1);
     }
 }

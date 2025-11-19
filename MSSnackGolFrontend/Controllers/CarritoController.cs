@@ -4,7 +4,6 @@ using Microsoft.AspNetCore.Mvc;
 using MSSnackGolFrontend.Infrastructure;
 using System.Net.Http;
 using System.Net.Http.Json;
-using System.Text;
 using System.Text.Json;
 
 namespace MSSnackGolFrontend.Controllers
@@ -129,10 +128,36 @@ namespace MSSnackGolFrontend.Controllers
                 var response = await client.PostAsJsonAsync("api/OrderManagement/Checkout", body);
                 if (response.IsSuccessStatusCode)
                 {
-                    var pickupCode = GeneratePickupCode();
-                    TempData["CartFlash"] = "Pedido confirmado. Presenta el código QR en la zona de entrega.";
-                    TempData["PickupCode"] = pickupCode;
-                    TempData["PickupQrPayload"] = BuildPickupQrPayload(pickupCode, token);
+                    var envelope = await response.Content.ReadFromJsonAsync<ApiEnvelope<CheckoutApiResponse>>(_jsonOptions);
+                    if (envelope?.response is CheckoutApiResponse checkoutResponse)
+                        {
+                            // Build typed confirmation model and store in TempData for the next request
+                            var confirmation = new Models.CheckoutConfirmationViewModel
+                            {
+                                OrderId = checkoutResponse.orderId,
+                                Status = checkoutResponse.status,
+                                Total = checkoutResponse.total,
+                                Pickup = checkoutResponse.pickup is null
+                                    ? null
+                                    : new Models.CheckoutConfirmationViewModel.PickupInfo
+                                    {
+                                        Code = checkoutResponse.pickup.pickupCode,
+                                        PayloadBase64 = checkoutResponse.pickup.pickupPayloadBase64,
+                                        QrImageBase64 = checkoutResponse.pickup.pickupQrImageBase64,
+                                        GeneratedAtUtc = checkoutResponse.pickup.generatedAtUtc,
+                                        DeliveredAtUtc = checkoutResponse.pickup.deliveredAtUtc
+                                    }
+                            };
+
+                            TempData["CheckoutConfirmation"] = JsonSerializer.Serialize(confirmation, _jsonOptions);
+                            TempData["CheckoutFlash"] = "Pedido confirmado. Presenta el QR en la zona de entrega.";
+                            // Redirect user to QR confirmation page
+                            return RedirectToAction("Confirmacion", "QR");
+                        }
+                    else
+                    {
+                        TempData["CartFlash"] = "Pedido confirmado, pero no se pudo obtener la información del QR.";
+                    }
                 }
                 else
                 {
@@ -307,26 +332,6 @@ namespace MSSnackGolFrontend.Controllers
 
         private string GetOrCreateSessionToken() => SessionTokenHelper.GetOrCreate(HttpContext);
 
-        private static string GeneratePickupCode()
-        {
-            var suffix = Guid.NewGuid().ToString("N").Substring(0, 6).ToUpperInvariant();
-            return $"SG-{DateTime.UtcNow:yyMMddHHmmss}-{suffix}";
-        }
-
-        private string BuildPickupQrPayload(string pickupCode, string sessionToken)
-        {
-            var payload = new
-            {
-                tag = "SNACKGOL_DELIVERY",
-                code = pickupCode,
-                session = sessionToken,
-                generatedAt = DateTime.UtcNow
-            };
-
-            var json = JsonSerializer.Serialize(payload, _jsonOptions);
-            return Convert.ToBase64String(Encoding.UTF8.GetBytes(json));
-        }
-
         private static async Task<string> ReadSafeContentAsync(HttpResponseMessage response)
         {
             try
@@ -371,6 +376,32 @@ namespace MSSnackGolFrontend.Controllers
 
             TempData["CartJson"] = JsonSerializer.Serialize(vm);
             return RedirectToAction("Index", "Factura");
+        }
+
+        private sealed class ApiEnvelope<T>
+        {
+            public bool success { get; set; }
+            public T? response { get; set; }
+            public string? errors { get; set; }
+        }
+
+        private sealed class CheckoutApiResponse
+        {
+            public string? orderId { get; set; }
+            public string? status { get; set; }
+            public double total { get; set; }
+            public PickupApiResponse? pickup { get; set; }
+        }
+
+        private sealed class PickupApiResponse
+        {
+            public string? orderId { get; set; }
+            public string? pickupCode { get; set; }
+            public string? pickupPayloadBase64 { get; set; }
+            public string? pickupQrImageBase64 { get; set; }
+            public DateTime? generatedAtUtc { get; set; }
+            public DateTime? deliveredAtUtc { get; set; }
+            public string? status { get; set; }
         }
     }
 }

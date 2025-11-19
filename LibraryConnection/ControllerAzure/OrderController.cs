@@ -37,8 +37,15 @@ namespace LibraryConnection.ControllerAzure
                             order_id = o.order_id,
                             customer_id = o.customer_id,
                             order_date = o.order_date,
+                            status = o.status,
                             total_net_price = o.total_net_price,
                             total_gross_amount = o.total_gross_amount,
+                            pickup_code = o.pickup_code,
+                            pickup_payload_base64 = o.pickup_payload_base64,
+                            pickup_qr_base64 = o.pickup_qr_base64,
+                            pickup_generated_at = o.pickup_generated_at,
+                            pickup_redeemed_at = o.pickup_redeemed_at,
+                            pickup_verified_by = o.pickup_verified_by,
                             OrderLines = o.OrderLines.Select(ol => new OrderLineResponse
                             {
                                 lineNum = ol.lineNum,
@@ -194,6 +201,15 @@ namespace LibraryConnection.ControllerAzure
                         order_id = o.order_id,
                         customer_id = o.customer_id,
                         order_date = o.order_date,
+                        status = o.status,
+                        total_gross_amount = o.total_gross_amount,
+                        total_net_price = o.total_net_price,
+                        pickup_code = o.pickup_code,
+                        pickup_payload_base64 = o.pickup_payload_base64,
+                        pickup_qr_base64 = o.pickup_qr_base64,
+                        pickup_generated_at = o.pickup_generated_at,
+                        pickup_redeemed_at = o.pickup_redeemed_at,
+                        pickup_verified_by = o.pickup_verified_by,
                         OrderLines = o.OrderLines.Select(ol => new OrderLineResponse
                         {
                             lineNum = ol.lineNum,
