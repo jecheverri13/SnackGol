@@ -1,0 +1,51 @@
+@startuml
+' Opcional: ajusta la ruta al tema compartido si lo usas
+' !include ./theme_snackgol.puml
+!pragma useVerticalIf on
+
+actor Usuario as U
+participant "Navegador" as B
+participant "MVC Frontend\n(Controllers)" as MVC
+participant "API SnackGol\nOrderManagementController" as API
+database "DB\n(ApplicationDbContext)" as DB
+participant "Payment Gateway\n(opcional)" as PG
+
+U -> B: Click "Pagar"
+B -> MVC: POST /checkout
+MVC -> API: POST /api/OrderManagement/Checkout\nX-Session-Token
+
+API -> DB: SELECT Cart por sesión/usuario\nJOIN Items + Product
+DB --> API: Cart + Items
+
+alt Carrito vacío o no encontrado
+  API --> MVC: 400 / 404
+  MVC --> B: Muestra error
+  return
+end
+
+loop por cada ítem
+  API -> API: Validar stock
+  alt Stock insuficiente
+    API --> MVC: 409 Conflict
+    MVC --> B: Notifica falta de stock
+    return
+  end
+end
+
+API -> DB: INSERT Order
+loop por cada ítem
+  API -> DB: INSERT OrderItem
+  API -> DB: UPDATE Product.stock -= qty
+end
+
+API -> DB: DELETE cart_items\nUPDATE cart.updated_at
+DB --> API: OK
+
+opt Pago externo (opcional)
+  API -> PG: Crear transacción
+  PG --> API: Resultado (OK / Error)
+end
+
+API --> MVC: 201 Created { orderId }
+MVC --> B: Redirige a Confirmación
+@enduml

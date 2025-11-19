@@ -1,0 +1,45 @@
+@startuml CU-P01
+title CU-P01: Visualizar productos disponibles
+
+!include theme_snackgol.puml
+
+actor "Espectador" as User
+participant "Web UI (ASP.NET Core MVC)" as UI
+participant "ProductManagmentController" as Controller
+participant "ProductService" as Service
+participant "ProductRepository" as Repo
+participant "ApplicationDbContext" as DbContext
+database "PostgreSQL" as PG
+
+User -> UI : Abre modulo "Productos disponibles"
+UI -> Controller : GET /api/ProductManagment/List?categoria&puntoventa&precio
+Controller -> Service : ObtenerProductos()
+Service -> Repo : ListarProductos()
+Repo -> DbContext : Query productos activos
+DbContext -> PG : SELECT * FROM products WHERE is_active=TRUE
+PG --> DbContext : filas
+DbContext --> Repo : entidades Product
+Repo --> Service : lista de productos
+Service --> Controller : DTOs (ProductDto[])
+Controller --> UI : 200 OK + JSON
+UI --> User : Muestra productos con stock, precio y punto de venta
+
+== Aplicar filtros ==
+User -> UI : Aplica filtros (categoria, punto de venta, precio)
+UI -> Controller : GET /api/ProductManagment/List?...
+Controller --> UI : 200 OK + JSON (filtrado)
+UI --> User : Lista actualizada
+
+== Actualizacion en tiempo real (opcional) ==
+... : Notificacion de cambio de stock (SignalR/SSE)
+UI -> UI : Refresca cantidades sin recargar
+
+alt No hay productos
+	Controller --> UI : 200 OK + []
+	UI --> User : "No hay productos disponibles"
+else Error de carga
+	Controller --> UI : 500 / timeout
+	UI -> UI : Mostrar mensaje y reintentar
+end
+
+@enduml

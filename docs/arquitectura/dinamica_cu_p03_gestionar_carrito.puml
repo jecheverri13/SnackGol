@@ -1,0 +1,86 @@
+@startuml CU-P03
+title CU-P03: Gestionar carrito de compras
+
+!include theme_snackgol.puml
+
+actor "Espectador" as User
+participant "Web UI (ASP.NET Core MVC)" as UI
+participant "CartManagmentController" as Controller
+participant "CartService" as Service
+participant "CartRepository" as CartRepo
+participant "ApplicationDbContext" as DbContext
+database "PostgreSQL" as PG
+
+== Visualizar carrito ==
+User -> UI : Abre carrito
+UI -> Controller : GET /api/CartManagment
+Controller -> Service : ObtenerCarrito(session)
+Service -> CartRepo : CargarCarrito(session)
+CartRepo -> DbContext : SELECT cart + items
+DbContext -> PG : SELECT ...
+PG --> DbContext : filas
+DbContext --> CartRepo : entidades Cart, CartItem
+CartRepo --> Service : CartDto
+Service --> Controller : CartDto
+Controller --> UI : 200 OK + JSON
+UI --> User : Muestra items, cantidades, total
+
+== Modificar cantidad ==
+User -> UI : Cambia cantidad
+UI -> Controller : PATCH /api/CartManagment/Items/{id} { quantity }
+Controller -> Service : ActualizarCantidad(itemId, qty)
+Service -> CartRepo : UpdateItem(itemId, qty)
+CartRepo -> DbContext : UPDATE cart_item + recalcular subtotal
+DbContext -> PG : UPDATE ...
+PG --> DbContext : OK
+DbContext --> CartRepo : OK
+CartRepo --> Service : Item actualizado
+Service --> Controller : OK
+Controller --> UI : 200 OK
+
+== Eliminar producto ==
+User -> UI : Eliminar item
+UI -> Controller : DELETE /api/CartManagment/Items/{id}
+Controller -> Service : EliminarItem(itemId)
+Service -> CartRepo : Delete(itemId)
+CartRepo -> DbContext : DELETE FROM cart_items WHERE id=?
+DbContext -> PG : DELETE ...
+PG --> DbContext : OK
+DbContext --> CartRepo : OK
+CartRepo --> Service : Item eliminado
+Service --> Controller : OK
+Controller --> UI : 204 No Content
+
+== Vaciar carrito ==
+User -> UI : Vaciar todo
+UI -> Controller : DELETE /api/CartManagment/Items (all)
+Controller -> Service : VaciarCarrito(session)
+Service -> CartRepo : DeleteAll(cartId)
+CartRepo -> DbContext : DELETE FROM cart_items WHERE cart_id=?
+DbContext -> PG : DELETE ...
+PG --> DbContext : OK
+DbContext --> CartRepo : OK
+CartRepo --> Service : OK
+Service --> Controller : OK
+Controller --> UI : 204 No Content
+UI --> User : Carrito vacio
+
+== Recoger en cocina (opcional) ==
+User -> UI : Toggle recoger en cocina
+UI -> Controller : POST /api/CartManagment/Pickup { enable }
+Controller --> UI : 200 OK
+UI --> User : Opcion actualizada
+
+alt Stock insuficiente al modificar
+	Service --> Controller : 409 Conflict (stock insuficiente)
+	Controller --> UI : 409 Conflict
+	UI -> UI : Ajustar cantidad al maximo disponible
+	UI --> User : Notificacion
+else Producto eliminado por admin
+	Service --> Controller : 404 Not Found
+	Controller --> UI : 404 Not Found
+	UI -> UI : Remover item
+	UI --> User : "Producto no disponible"
+end
+
+@enduml

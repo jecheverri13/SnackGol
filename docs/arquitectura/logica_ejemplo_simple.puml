@@ -1,0 +1,30 @@
+@startuml LogicaSimple
+title SnackGol - Vista logica (simple)
+
+!include theme_snackgol.puml
+
+package "Seguridad / Control" as SecPkg COL_API {
+  component "Control" as Control COL_API
+}
+
+package "Entidades" as EntPkg COL_LIB {
+  component "Entities" as Entities COL_LIB
+}
+
+package "Persistencia" as PerPkg COL_DB {
+  interface "IServiciosDatos" as IDataSvc
+  component "Repositories" as Repos COL_DB
+}
+
+Control ..> IDataSvc : usa
+IDataSvc ..> Repos : implementa
+Repos ..> Entities
+
+legend right
+  Colors:
+  - API/Control: light violet
+  - Entities: light yellow
+  - Persistence: light green
+endlegend
+
+@enduml

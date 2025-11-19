@@ -1,0 +1,65 @@
+@startuml Logica
+title SnackGol - Vista lógica por capas (paquetes)
+
+!include theme_snackgol.puml
+
+package "Capa 1 - Presentación" {
+  [MSSnackGolFrontend (ASP.NET Core MVC)] as Frontend
+  [API Controllers (MSSnackGol)] as ApiControllers
+  [Middleware (JWT, errores)] as Middleware
+}
+
+package "Capa 2 - Lógica de Negocio" {
+  [ProductService]
+  [CartService]
+  [OrderService]
+  [AuthService]
+}
+
+package "Capa 3 - Acceso a Datos" {
+  [ApplicationDbContext]
+  [Repositories\n(UserRepo, ProductRepo, CartRepo, OrderRepo)] as Repos
+}
+
+package "Capa 4 - Dominio" {
+  [Entities (LibraryEntities)] as Entities
+  [DTOs (LibraryConnection.Dtos)] as DTOs
+  [Validators]
+}
+
+package "Capa 5 - Infraestructura" {
+  [LibraryAuthentication]
+  [LibraryEncrypt]
+  [Azure App Insights]
+}
+
+database "PostgreSQL" as PostgreSQL
+
+Frontend --> ApiControllers : HTTP / JSON
+ApiControllers --> ProductService
+ApiControllers --> CartService
+ApiControllers --> OrderService
+ApiControllers ..> [LibraryAuthentication]
+ApiControllers ..> [LibraryEncrypt]
+ApiControllers ..> [Azure App Insights]
+
+ProductService --> Repos
+CartService --> Repos
+OrderService --> Repos
+
+Repos --> ApplicationDbContext
+ApplicationDbContext --> Entities
+ApplicationDbContext --> PostgreSQL : Npgsql
+
+DTOs .. Entities
+
+note bottom of ApiControllers
+  Controladores ejemplo:
+  - ProductManagmentController
+  - CartManagmentController
+  - OrderManagmentController
+  - LoginManagmentController
+  - ClientManagmentController
+end note
+
+@enduml
