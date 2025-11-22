@@ -1,0 +1,27 @@
+@startuml dinamica_cu_p05_generar_qr
+' CU-P05: Generar QR de entrega
+skinparam monochrome true
+skinparam sequenceArrowThickness 1
+skinparam ParticipantPadding 15
+
+actor Cliente
+participant "Frontend MVC\n(SnackGol Web)" as Web
+participant "API OrderManagement\nCheckout/Validate" as Api
+participant "PostgreSQL\ncarritos & ordenes" as DB
+actor "Punto de entrega" as Runner
+
+Cliente -> Web : Confirma checkout
+Web -> Api : POST /api/OrderManagement/Checkout\nX-Session-Token
+Api -> DB : Valida carrito y stock
+Api -> Api : Genera QR (payload + hash + imagen)
+Api -> DB : Persiste orden + pickup artifacts\nLimpia carrito
+Api --> Web : 201 CheckoutResult + QR base64
+Web --> Cliente : Vista Confirmación + QR
+
+== Validación en entrega ==
+Cliente -> Runner : Muestra QR desde móvil
+Runner -> Api : POST /{orderId}/pickup/validate\nBody: token
+Api -> DB : Comparar hash y marcar entregado
+Api --> Runner : 200 OK + estado Delivered
+Runner --> Cliente : Entrega confirmada
+@enduml

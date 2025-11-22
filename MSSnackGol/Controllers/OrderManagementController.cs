@@ -12,6 +12,7 @@ using System.Text;
 using System.Text.Json;
 using System.Linq;
 using QRCoder;
+using SkiaSharp;
 
 namespace MSSnackGol.Controllers
 {
@@ -196,7 +197,7 @@ namespace MSSnackGol.Controllers
                 };
 
                 var pickupCode = GeneratePickupCode();
-                var artifacts = BuildPickupArtifacts(orderId, pickupCode, session);
+                var artifacts = BuildPickupArtifacts(orderId, pickupCode, session, items);
 
                 order.pickup_code = pickupCode;
                 order.pickup_token_hash = HashToken(artifacts.Token);
@@ -393,19 +394,141 @@ namespace MSSnackGol.Controllers
             return Convert.ToHexString(bytes);
         }
 
-        private static (string Token, string PayloadBase64, string QrImageBase64) BuildPickupArtifacts(string orderId, string pickupCode, string? sessionToken)
+        private static (string Token, string PayloadBase64, string QrImageBase64) BuildPickupArtifacts(string orderId, string pickupCode, string? sessionToken, List<CartItem> items)
         {
+            items ??= new List<CartItem>();
+
             var token = Convert.ToHexString(RandomNumberGenerator.GetBytes(16));
             var payload = new PickupPayload(orderId, pickupCode, token, sessionToken, DateTime.UtcNow);
             var payloadJson = JsonSerializer.Serialize(payload, PickupJsonOptions);
             var payloadBase64 = Convert.ToBase64String(Encoding.UTF8.GetBytes(payloadJson));
 
+            // Construir contenido legible para el QR (lista resumida que cualquier escáner interpreta)
+            var sb = new StringBuilder();
+            sb.AppendLine("SnackGol - Pedido confirmado");
+            sb.AppendLine($"Orden: {orderId}");
+            sb.AppendLine($"Código: {pickupCode}");
+            sb.AppendLine("----------------");
+            if (items.Count == 0)
+            {
+                sb.AppendLine("Detalle no disponible");
+            }
+            else
+            {
+                foreach (var item in items)
+                {
+                    var label = string.IsNullOrWhiteSpace(item.Product?.name)
+                        ? $"Producto #{item.product_id}"
+                        : item.Product!.name;
+                    sb.AppendLine($"{item.quantity}x {label}");
+                }
+            }
+
+            sb.AppendLine("----------------");
+            var totalFormatted = (items.Sum(i => i.subtotal)).ToString("C0", new CultureInfo("es-CO"));
+            sb.AppendLine($"Total: {totalFormatted}");
+            sb.AppendLine("Presenta este QR en SnackGol para retirar tu pedido.");
+
+            var qrContent = sb.ToString();
+
             var qrGenerator = new QRCodeGenerator();
-            var qrData = qrGenerator.CreateQrCode(payloadJson, QRCodeGenerator.ECCLevel.M);
-            var pngQr = new PngByteQRCode(qrData).GetGraphic(20);
-            var qrImageBase64 = Convert.ToBase64String(pngQr);
+            var qrData = qrGenerator.CreateQrCode(qrContent, QRCodeGenerator.ECCLevel.H); // Mayor corrección para soportar el logo
+
+            // Color oscuro personalizado manteniendo alto contraste
+            var brandDark = new byte[] { 32, 35, 45 };
+            var pngQr = new PngByteQRCode(qrData).GetGraphic(20, brandDark, new byte[] { 255, 255, 255 }, true);
+
+            using var logoBitmap = GenerateLogoBitmap(120, 120);
+            var qrWithLogo = OverlayLogoOnQr(pngQr, logoBitmap);
+
+            var qrImageBase64 = Convert.ToBase64String(qrWithLogo);
 
             return (token, payloadBase64, qrImageBase64);
+        }
+
+        private static SKBitmap GenerateLogoBitmap(int width, int height)
+        {
+            var bitmap = new SKBitmap(width, height);
+            using var canvas = new SKCanvas(bitmap);
+            canvas.Clear(SKColors.Transparent);
+
+            // Dibujar círculo de fondo
+            var paint = new SKPaint { Color = new SKColor(255, 107, 53), IsAntialias = true };
+            canvas.DrawCircle(width / 2, height / 2, width / 2 - 5, paint);
+
+            // Dibujar dona
+            paint.Color = SKColors.Gold;
+            canvas.DrawCircle(width / 2, height / 2 - 10, 15, paint);
+            paint.Color = SKColors.OrangeRed;
+            canvas.DrawCircle(width / 2, height / 2 - 10, 10, paint);
+
+            // Ojos
+            paint.Color = SKColors.White;
+            canvas.DrawCircle(width / 2 - 5, height / 2 - 15, 2, paint);
+            canvas.DrawCircle(width / 2 + 5, height / 2 - 15, 2, paint);
+            canvas.DrawCircle(width / 2, height / 2 - 5, 2, paint);
+
+            // Texto
+            paint.Color = SKColors.White;
+            paint.TextSize = 12;
+            paint.TextAlign = SKTextAlign.Center;
+            canvas.DrawText("SnackGol", width / 2, height / 2 + 20, paint);
+            paint.TextSize = 8;
+            canvas.DrawText("¡Tu snack favorito!", width / 2, height / 2 + 35, paint);
+
+            return bitmap;
+        }
+
+        private static byte[] OverlayLogoOnQr(byte[] qrBytes, SKBitmap logo)
+        {
+            using var qrStream = new MemoryStream(qrBytes);
+            using var qrBitmap = SKBitmap.Decode(qrStream);
+            using var canvas = new SKCanvas(qrBitmap);
+
+            var logoSize = Math.Min(qrBitmap.Width, qrBitmap.Height) / 5f; // Logo ocupa 20% del QR
+            var logoRect = new SKRect(
+                (qrBitmap.Width - logoSize) / 2f,
+                (qrBitmap.Height - logoSize) / 2f,
+                (qrBitmap.Width + logoSize) / 2f,
+                (qrBitmap.Height + logoSize) / 2f
+            );
+
+            var cornerRadius = logoSize * 0.25f;
+
+            using (var backgroundPaint = new SKPaint
+            {
+                Color = SKColors.White,
+                IsAntialias = true
+            })
+            {
+                canvas.DrawRoundRect(logoRect, cornerRadius, cornerRadius, backgroundPaint);
+            }
+
+            var inset = logoSize * 0.08f;
+            var innerRect = new SKRect(
+                logoRect.Left + inset,
+                logoRect.Top + inset,
+                logoRect.Right - inset,
+                logoRect.Bottom - inset
+            );
+
+            using (var borderPaint = new SKPaint
+            {
+                Color = new SKColor(255, 107, 53),
+                Style = SKPaintStyle.Stroke,
+                StrokeWidth = Math.Max(2f, logoSize * 0.06f),
+                IsAntialias = true
+            })
+            {
+                canvas.DrawRoundRect(innerRect, cornerRadius * 0.9f, cornerRadius * 0.9f, borderPaint);
+            }
+
+            canvas.DrawBitmap(logo, innerRect);
+            canvas.Flush();
+
+            using var outputStream = new MemoryStream();
+            qrBitmap.Encode(outputStream, SKEncodedImageFormat.Png, 100);
+            return outputStream.ToArray();
         }
 
         private record PickupPayload(string OrderId, string PickupCode, string Token, string? SessionToken, DateTime GeneratedAtUtc);

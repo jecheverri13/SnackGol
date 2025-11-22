@@ -5,73 +5,122 @@
     var qrImage = Model.Pickup?.QrImageBase64;
     var qrPayload = Model.Pickup?.PayloadBase64;
     var pickupCode = string.IsNullOrWhiteSpace(Model.Pickup?.Code) ? "Pendiente" : Model.Pickup?.Code;
-    var status = string.IsNullOrWhiteSpace(Model.Status) ? "Confirmado" : Model.Status;
+    var isReadyForPickup = string.Equals(Model.Status, "ReadyForPickup", System.StringComparison.OrdinalIgnoreCase);
+    var isDelivered = string.Equals(Model.Status, "Delivered", System.StringComparison.OrdinalIgnoreCase);
+    var statusDisplay = isDelivered ? "Entregado" : (isReadyForPickup ? "Listo para recoger" : "Confirmado");
     var flash = ViewBag.CheckoutFlash as string;
 }
 
 <div class="container py-4 py-lg-5">
     <div class="row justify-content-center">
         <div class="col-12 col-lg-10 col-xl-8">
-            <div class="card shadow-sm border-0 confirmation-card">
+            <div class="card shadow-lg border-0 confirmation-card overflow-hidden">
+                <div class="confirmation-hero p-4 p-lg-5 text-white">
+                    <div class="d-flex flex-column flex-md-row align-items-center gap-4">
+                        <img src="~/images/logo_snackgol.svg" alt="Logo SnackGol" class="hero-logo" />
+                        <div class="text-center text-md-start">
+                            <span class="pill mb-2 d-inline-flex align-items-center gap-2 text-uppercase"><i class="bi bi-check-circle-fill"></i> Pedido confirmado</span>
+                            <h1 class="display-6 fw-semibold mb-2">¡Estamos preparando tu SnackGol!</h1>
+                            <p class="hero-subtitle mb-0">Dirígete al módulo de entrega y presenta este código cuando el personal te lo solicite.</p>
+                        </div>
+                    </div>
+                    <div class="hero-stats d-flex flex-wrap gap-3 mt-4">
+                        <div class="stat-chip">
+                            <span class="label">Orden</span>
+                            <span class="value">@(!string.IsNullOrWhiteSpace(Model.OrderId) ? Model.OrderId : "Pendiente")</span>
+                        </div>
+                        <div class="stat-chip">
+                            <span class="label">Código de recogida</span>
+                            <div class="d-flex align-items-center gap-2">
+                                <span class="value" data-pickup-code>@pickupCode</span>
+                                @if (!string.Equals(pickupCode, "Pendiente", System.StringComparison.OrdinalIgnoreCase))
+                                {
+                                    <button type="button" class="btn btn-sm btn-light copy-btn" data-copy-code data-copy-value="@pickupCode" aria-label="Copiar código de recogida">
+                                        <i class="bi bi-clipboard"></i>
+                                    </button>
+                                }
+                            </div>
+                        </div>
+                        <div class="stat-chip">
+                            <span class="label">Estado</span>
+                            <span class="value">@statusDisplay</span>
+                        </div>
+                        <div class="stat-chip">
+                            <span class="label">Total</span>
+                            <span class="value">@Model.Total.ToString("C0", new System.Globalization.CultureInfo("es-CO"))</span>
+                        </div>
+                    </div>
+                </div>
                 <div class="card-body p-4 p-lg-5">
-                    <div class="d-flex flex-column flex-md-row align-items-center align-items-md-start gap-4">
-                        <div class="flex-fill text-center text-md-start">
-                            <span class="pill mb-2 d-inline-flex align-items-center gap-2 text-success"><i class="bi bi-check-circle-fill"></i> Pedido confirmado</span>
-                            <h1 class="h3 h-md-2 fw-semibold mb-3">Tu orden está en preparación</h1>
-                            <p class="text-muted mb-3">Presenta este código QR al personal de SnackGol cuando te acerques a recoger tu pedido. Ellos escanearán el código para validar la entrega.</p>
-                            <div class="d-flex flex-wrap gap-3 text-start">
-                                <div class="order-detail">
-                                    <span class="label">Orden</span>
-                                    <span class="value">@(!string.IsNullOrWhiteSpace(Model.OrderId) ? Model.OrderId : "Pendiente")</span>
+                    <div class="row g-4 align-items-start">
+                        <div class="col-lg-5">
+                            <div class="qr-panel text-center h-100">
+                                @if (!string.IsNullOrWhiteSpace(qrImage))
+                                {
+                                    <img src="data:image/png;base64,@qrImage" alt="Código QR del pedido" class="qr-image shadow-sm" loading="lazy" decoding="async" />
+                                }
+                                else
+                                {
+                                    <div id="generated-qr" class="qr-image shadow-sm d-flex justify-content-center align-items-center">
+                                        <span class="text-muted small">Generando QR…</span>
+                                    </div>
+                                }
+                                <div class="qr-actions mt-3">
+                                    <button type="button" class="btn btn-primary w-100" data-download-qr @(string.IsNullOrWhiteSpace(qrImage) ? "disabled" : null)>Descargar QR</button>
+                                    <button type="button" class="btn btn-outline-secondary w-100 d-none d-lg-inline-flex" onclick="window.print()">Imprimir</button>
                                 </div>
-                                <div class="order-detail">
-                                    <span class="label">Código de recogida</span>
-                                    <span class="value" data-pickup-code>@pickupCode</span>
-                                </div>
-                                <div class="order-detail">
-                                    <span class="label">Estado</span>
-                                    <span class="value">@status</span>
-                                </div>
-                                <div class="order-detail">
-                                    <span class="label">Total</span>
-                                    <span class="value">@Model.Total.ToString("C0", new System.Globalization.CultureInfo("es-CO"))</span>
-                                </div>
+                                <p class="text-muted small mt-2 mb-0">Sube el brillo de tu pantalla y mantén el teléfono perpendicular al lector.</p>
                             </div>
                         </div>
-                        <div class="qr-wrapper text-center w-100 w-md-auto">
-                            @if (!string.IsNullOrWhiteSpace(qrImage))
-                            {
-                                <img src="data:image/png;base64,@qrImage" alt="Código QR del pedido" class="qr-image shadow-sm" loading="lazy" decoding="async" />
-                            }
-                            else
-                            {
-                                <div id="generated-qr" class="qr-image shadow-sm d-flex justify-content-center align-items-center">
-                                    <span class="text-muted small">Generando QR…</span>
+                        <div class="col-lg-7">
+                            <div class="status-timeline mb-4">
+                                <div class="timeline-step done">
+                                    <span class="dot"></span>
+                                    <div>
+                                        <p class="title mb-0">Pedido confirmado</p>
+                                        <small>Pago recibido y orden registrada.</small>
+                                    </div>
                                 </div>
-                            }
-                            <div class="small text-muted mt-2">Mantén la pantalla en brillo alto para facilitar el escaneo.</div>
-                        </div>
-                    </div>
-
-                    <div class="row mt-4 g-3">
-                        <div class="col-12 col-md-6">
-                            <div class="info-tile">
-                                <h3 class="h6 fw-semibold mb-1">¿Dónde presentarlo?</h3>
-                                <p class="text-muted mb-0">Dirígete al módulo de cocina SnackGol y muestra este QR al staff. Ellos verificarán tu pedido antes de entregarlo.</p>
+                                <div class="timeline-step @(isReadyForPickup || isDelivered ? "done" : "pending")">
+                                    <span class="dot"></span>
+                                    <div>
+                                        <p class="title mb-0">Listo para recoger</p>
+                                        <small>Estado actual: @statusDisplay</small>
+                                    </div>
+                                </div>
+                                <div class="timeline-step @(isDelivered ? "done" : "pending")">
+                                    <span class="dot"></span>
+                                    <div>
+                                        <p class="title mb-0">Pedido entregado</p>
+                                        <small>El personal marcará este paso al entregarlo.</small>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="info-grid mb-4">
+                                <div class="info-card">
+                                    <h3 class="h6 fw-semibold">Resumen</h3>
+                                    <ul class="list-unstyled mb-0 small text-muted">
+                                        <li><strong>Orden:</strong> @(!string.IsNullOrWhiteSpace(Model.OrderId) ? Model.OrderId : "Pendiente")</li>
+                                        <li><strong>Código:</strong> <span data-pickup-code>@pickupCode</span></li>
+                                        <li><strong>Estado:</strong> @statusDisplay</li>
+                                        <li><strong>Total:</strong> @Model.Total.ToString("C0", new System.Globalization.CultureInfo("es-CO"))</li>
+                                    </ul>
+                                </div>
+                                <div class="info-card">
+                                    <h3 class="h6 fw-semibold">Tips rápidos</h3>
+                                    <ul class="tips-list mb-0">
+                                        <li>Llega 5 minutos antes para evitar filas.</li>
+                                        <li>¿Otra persona retira? Reenvíale este QR.</li>
+                                        <li>Ante cualquier duda, busca al staff SnackGol.</li>
+                                    </ul>
+                                </div>
+                            </div>
+                            <div class="d-flex flex-column flex-md-row gap-2">
+                                <a asp-controller="Home" asp-action="Index" class="btn btn-outline-secondary flex-fill">Volver al inicio</a>
+                                <a asp-controller="Carrito" asp-action="Index" class="btn btn-secondary flex-fill">Ver carrito</a>
+                                <a asp-controller="Home" asp-action="Index" class="btn btn-outline-secondary flex-fill d-none d-xl-inline-flex">Ver catálogo</a>
                             </div>
                         </div>
-                        <div class="col-12 col-md-6">
-                            <div class="info-tile">
-                                <h3 class="h6 fw-semibold mb-1">Recuerda</h3>
-                                <p class="text-muted mb-0">Puedes reenviar el código a otra persona. Si cerraste esta página, siempre podrás obtener tu QR desde el panel de pedidos.</p>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="d-flex flex-column flex-sm-row gap-2 mt-4">
-                        <a asp-controller="Home" asp-action="Index" class="btn btn-outline-secondary flex-fill flex-sm-grow-0">Volver al inicio</a>
-                        <a asp-controller="Carrito" asp-action="Index" class="btn btn-secondary flex-fill flex-sm-grow-0">Ver carrito</a>
-                        <a asp-controller="Home" asp-action="Index" class="btn btn-outline-secondary d-none d-md-inline-flex">Ver catálogo</a>
                     </div>
                 </div>
             </div>
@@ -86,58 +135,183 @@
 
 @section Styles {
     <style>
-        .confirmation-card .order-detail {
+        .confirmation-card {
+            border-radius: 1.5rem;
+        }
+        .confirmation-hero {
+            background: linear-gradient(135deg, #ff6b35, #ff9f1c);
+        }
+        .confirmation-hero .hero-logo {
+            width: 120px;
+            height: auto;
+        }
+        .pill {
+            font-size: .75rem;
+            letter-spacing: .08em;
+            background-color: rgba(255,255,255,.1);
+            padding: .35rem .85rem;
+            border-radius: 999px;
+        }
+        .hero-subtitle {
+            max-width: 520px;
+            opacity: .9;
+        }
+        .hero-stats .stat-chip {
+            background-color: rgba(255,255,255,.15);
+            padding: .85rem 1.2rem;
+            border-radius: 1rem;
+            min-width: 180px;
+        }
+        .hero-stats .label {
+            text-transform: uppercase;
+            font-size: .7rem;
+            letter-spacing: .08em;
+            opacity: .85;
+        }
+        .hero-stats .value {
+            font-weight: 600;
+            font-size: 1.05rem;
+        }
+        .copy-btn {
+            border-radius: 999px;
+            padding: .2rem .6rem;
+        }
+        .copy-btn.copied {
+            background-color: #198754;
+            color: #fff;
+        }
+        .qr-panel {
+            background: #f8f9fb;
+            border-radius: 1.25rem;
+            padding: 1.75rem 1.25rem;
+        }
+        .qr-image {
+            width: 100%;
+            max-width: 300px;
+            border-radius: 1rem;
+            background: #fff;
+            padding: 1.25rem;
+            margin: 0 auto;
+        }
+        .qr-actions .btn {
+            border-radius: .9rem;
+        }
+        .status-timeline {
             display: flex;
             flex-direction: column;
-            min-width: 140px;
+            gap: 1rem;
         }
-        .confirmation-card .order-detail .label {
-            font-size: .75rem;
-            text-transform: uppercase;
-            color: #6c757d;
-            letter-spacing: .04em;
+        .timeline-step {
+            display: flex;
+            gap: 1rem;
+            align-items: flex-start;
+            padding: .75rem 1rem;
+            border-radius: 1rem;
+            background: #f8f9fb;
         }
-        .confirmation-card .order-detail .value {
+        .timeline-step .dot {
+            width: 14px;
+            height: 14px;
+            border-radius: 999px;
+            background: #d1d5db;
+            margin-top: .35rem;
+            flex-shrink: 0;
+        }
+        .timeline-step.done .dot {
+            background: #ff6b35;
+            box-shadow: 0 0 0 4px rgba(255, 107, 53, .25);
+        }
+        .timeline-step .title {
             font-weight: 600;
-            font-size: 1rem;
         }
-        .confirmation-card .qr-wrapper {
-            max-width: 420px; /* increase for larger screens */
+        .timeline-step.pending {
+            opacity: .75;
         }
-        .confirmation-card .qr-image {
-            width: 100%;
-            max-width: 320px; /* increased value */
-            border-radius: 1rem;
-            background-color: #fff;
+        .info-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 1rem;
+        }
+        .info-card {
+            background: #fdfdfd;
+            border-radius: 1.1rem;
             padding: 1.25rem;
-        }
-        .info-tile {
-            background-color: #f8f9fa;
-            border-radius: 1rem;
-            padding: 1.25rem;
+            box-shadow: inset 0 0 0 1px #f0f0f0;
             height: 100%;
         }
+        .tips-list {
+            list-style: disc;
+            padding-left: 1.25rem;
+            color: #495057;
+        }
+        .tips-list li {
+            margin-bottom: .4rem;
+        }
         @@media (max-width: 992px) {
-            .confirmation-card .qr-image {
-                max-width: 260px;
+            .hero-stats .stat-chip {
+                min-width: 130px;
             }
         }
         @@media (max-width: 768px) {
             .confirmation-card .card-body {
                 padding: 2rem 1.5rem !important;
             }
-            .confirmation-card .order-detail {
-                min-width: unset;
+            .hero-stats {
+                justify-content: center;
             }
-            .confirmation-card .qr-image {
-                max-width: 180px; /* smaller for mobile */
-                margin: 0 auto;
+            .qr-panel {
+                padding: 1.25rem;
+            }
+            .timeline-step {
+                flex-direction: column;
             }
         }
     </style>
 }
 
 @section Scripts {
+    <script>
+        document.addEventListener("DOMContentLoaded", () => {
+            const downloadBtn = document.querySelector("[data-download-qr]");
+            const qrBase64 = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(qrImage));
+            const orderIdValue = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.OrderId ?? "pedido"));
+
+            if (downloadBtn) {
+                if (!qrBase64) {
+                    downloadBtn.setAttribute("disabled", "disabled");
+                } else {
+                    downloadBtn.addEventListener("click", () => {
+                        const cleanOrderId = (orderIdValue || "pedido").replace(/[^a-zA-Z0-9-_]/g, "");
+                        const link = document.createElement("a");
+                        link.href = `data:image/png;base64,${qrBase64}`;
+                        link.download = `snackgol-qr-${cleanOrderId || "pedido"}.png`;
+                        document.body.appendChild(link);
+                        link.click();
+                        document.body.removeChild(link);
+                    });
+                }
+            }
+
+            document.querySelectorAll("[data-copy-code]").forEach(btn => {
+                btn.addEventListener("click", () => {
+                    const value = btn.getAttribute("data-copy-value");
+                    if (!value || value.toLowerCase() === "pendiente") {
+                        return;
+                    }
+                    navigator.clipboard?.writeText(value).then(() => {
+                        const originalContent = btn.innerHTML;
+                        btn.innerHTML = "<i class='bi bi-check2'></i>";
+                        btn.classList.add("copied");
+                        setTimeout(() => {
+                            btn.innerHTML = originalContent;
+                            btn.classList.remove("copied");
+                        }, 1500);
+                    });
+                });
+            });
+        });
+    </script>
+
     @if (string.IsNullOrWhiteSpace(qrImage) && !string.IsNullOrWhiteSpace(qrPayload))
     {
         <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.0/build/qrcode.min.js"></script>
@@ -158,15 +332,14 @@
                         codeLabel.textContent = parsed.code;
                     }
 
-                    // Dynamic width based on viewport
                     const computeWidth = () => {
                         const vw = Math.max(document.documentElement.clientWidth || 0, window.innerWidth || 0);
-                        const desired = Math.floor(vw * 0.45); // 45% of viewport
-                        return Math.min(320, Math.max(120, desired));
+                        const desired = Math.floor(vw * 0.45);
+                        return Math.min(320, Math.max(140, desired));
                     };
 
                     const canvas = document.createElement("canvas");
-                    QRCode.toCanvas(canvas, decoded, { width: computeWidth(), errorCorrectionLevel: "M", margin: 1 }, (error) => {
+                    QRCode.toCanvas(canvas, decoded, { width: computeWidth(), errorCorrectionLevel: "H", margin: 2 }, (error) => {
                         if (error) {
                             console.error("No se pudo generar el código QR", error);
                             return;
@@ -176,15 +349,13 @@
                         fallback.appendChild(canvas);
                     });
 
-                    // Recompute on resize
                     let resizeTimer = null;
                     window.addEventListener('resize', () => {
                         if (resizeTimer) window.clearTimeout(resizeTimer);
                         resizeTimer = window.setTimeout(() => {
-                            QRCode.toCanvas(canvas, decoded, { width: computeWidth(), errorCorrectionLevel: "M", margin: 1 }, (error) => {
+                            QRCode.toCanvas(canvas, decoded, { width: computeWidth(), errorCorrectionLevel: "H", margin: 2 }, (error) => {
                                 if (error) {
                                     console.error("No se pudo actualizar el tamaño del QR", error);
-                                    return;
                                 }
                             });
                         }, 150);
