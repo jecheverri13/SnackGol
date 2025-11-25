@@ -9,7 +9,7 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace LibraryConnection.Migrations
 {
     /// <inheritdoc />
-    public partial class Inicial : Migration
+    public partial class ActualizarModelo : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -116,7 +116,14 @@ namespace LibraryConnection.Migrations
                     order_date = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
                     status = table.Column<string>(type: "text", nullable: true),
                     total_gross_amount = table.Column<double>(type: "double precision", nullable: false),
-                    total_net_price = table.Column<double>(type: "double precision", nullable: false)
+                    total_net_price = table.Column<double>(type: "double precision", nullable: false),
+                    pickup_code = table.Column<string>(type: "text", nullable: true),
+                    pickup_token_hash = table.Column<string>(type: "text", nullable: true),
+                    pickup_payload_base64 = table.Column<string>(type: "text", nullable: true),
+                    pickup_qr_base64 = table.Column<string>(type: "text", nullable: true),
+                    pickup_generated_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
+                    pickup_redeemed_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
+                    pickup_verified_by = table.Column<string>(type: "text", nullable: true)
                 },
                 constraints: table =>
                 {
@@ -234,11 +241,11 @@ namespace LibraryConnection.Migrations
                     { 2, 1, "Bebida gaseosa", "https://images.unsplash.com/photo-1622708862830-a026e3ef60bd?ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&q=80&w=682", true, "Gaseosa cola 500ml", 2500.0, 80 },
                     { 3, 1, "Sabor naranja", "https://images.unsplash.com/photo-1621506289894-c3a62d6be8f3?ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&q=80&w=687", true, "Jugo natural 350ml", 2200.0, 60 },
                     { 4, 2, "Snack salado", "https://images.unsplash.com/photo-1741520150134-0d60d82dfac9?ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&q=80&w=1406", true, "Papitas clásicas 45g", 1800.0, 120 },
-                    { 5, 2, "Bolsa de maní", "https://www.istockphoto.com/photo/roasted-salted-peanuts-in-bowl-on-wooden-table-gm2208003368-625205923?utm_source=unsplash&utm_medium=affiliate&utm_campaign=srp_photos_bottom&utm_content=https%3A%2F%2Funsplash.com%2Fes%2Fs%2Ffotos%2Froasted-peanuts-salted&utm_term=roasted+peanuts+salted%3A%3Alayout-below-fold-units-2%3Acontrol", true, "Maní salado 50g", 1500.0, 90 },
-                    { 6, 2, "Con queso", "https://unsplash.com/es/fotos/una-pizza-con-verduras-y-queso-RV4-buXKOS8", true, "Nachos 70g", 2300.0, 70 },
-                    { 7, 3, "70% cacao", "https://unsplash.com/es/fotos/barra-de-chocolate-hersheys-sobre-superficie-blanca-7pvYgmkqOzc", true, "Chocolate barra 40g", 2000.0, 50 },
-                    { 8, 3, "Frutales", "https://unsplash.com/es/fotos/un-monton-de-caramelos-de-diferentes-colores-sobre-una-superficie-azul-1hRz-_MIwbk", true, "Gomitas 90g", 1600.0, 65 },
-                    { 9, 3, "Bandeja de cupcakes", "https://media.istockphoto.com/id/171360702/es/foto/vista-a%C3%A9rea-de-la-bandeja-con-cupcakes.webp?a=1&b=1&s=612x612&w=0&k=20&c=y9htsC84M1g1lu03oQYNBMIWqxMmWQr9_T7nGdk8hvA=", true, "Cupcakes surtidos", 1800.0, 40 }
+                    { 5, 2, "Bolsa de maní", "https://media.istockphoto.com/id/2149777376/photo/salted-roasted-peanuts-in-bowl-on-kitchen-table.jpg?s=612x612&w=0&k=20&c=Xb0yc6TXrYSqtGX4mtnQxhGORsmG0aXWtekhAgS85Ks=", true, "Maní salado 50g", 1500.0, 90 },
+                    { 6, 2, "Con queso", "https://stordfkenticomedia.blob.core.windows.net/df-us/rms/media/recipemediafiles/recipe%20images%20and%20files/k12/desktop%20(900x600)/2024/apr/2024_k12_ultimate-jalapeno-nachos_900x600.jpg?ext=.jpg", true, "Nachos 70g", 2300.0, 70 },
+                    { 7, 3, "70% cacao", "https://www.ferrerorocher.com/us/sites/ferrerorocher20_us/files/2025-08/250035-t1-rocher-dark-frontale-eng.png?t=1756883333", true, "Chocolate barra 40g", 2000.0, 50 },
+                    { 8, 3, "Frutales", "http://sweetasfudge.com/cdn/shop/products/Assorted-Fruit-Slices-on-White.jpg?v=1681352307", true, "Gomitas 90g", 1600.0, 65 },
+                    { 9, 3, "Bandeja de cupcakes", "https://plus.unsplash.com/premium_photo-1681506436855-db38ac7cf9e6?ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1yZWxhdGVkfDR8fHxlbnwwfHx8fHw%3D&auto=format&fit=crop&q=80&w=800", true, "Cupcakes surtidos", 1800.0, 40 }
                 });
 
             migrationBuilder.CreateIndex(
