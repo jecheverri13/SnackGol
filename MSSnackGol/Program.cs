@@ -6,6 +6,7 @@ using System.Reflection;
 using Microsoft.EntityFrameworkCore;
 using LibraryConnection.Context;
 using MSSnackGol.Middleware;
+using MSSnackGol.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -13,6 +14,9 @@ builder.Services.AddMemoryCache();
 builder.Services.AddControllers();
 builder.Services.AddHttpClient();
 builder.Services.AddDbContext<ApplicationDbContext>();
+
+// Registrar servicios de aplicación
+builder.Services.AddSingleton<IQRGeneratorService, QRGeneratorService>();
 
 var environment = builder.Environment.EnvironmentName;
 builder.Configuration.SetBasePath(Directory.GetCurrentDirectory())

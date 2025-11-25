@@ -23,6 +23,28 @@ namespace LibraryConnection.Dtos
         public List<OrderLineRequest>? order_lines { get; set; }
     }
 
+    /// <summary>
+    /// Solicitud para actualizar el estado de un pedido.
+    /// </summary>
+    public class UpdateStatusRequest
+    {
+        /// <summary>
+        /// Nuevo estado del pedido: Confirmed, Preparing, ReadyForPickup, Delivered
+        /// </summary>
+        [Required]
+        public string? NewStatus { get; set; }
+        
+        /// <summary>
+        /// Usuario/staff que realiza la actualización (opcional).
+        /// </summary>
+        public string? UpdatedBy { get; set; }
+        
+        /// <summary>
+        /// Si es true, permite retroceder el estado (solo para correcciones).
+        /// </summary>
+        public bool ForceUpdate { get; set; } = false;
+    }
+
     public class OrderLineRequest
     {
         [StringLength(25)]

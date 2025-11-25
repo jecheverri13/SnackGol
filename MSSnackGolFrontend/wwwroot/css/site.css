@@ -1,10 +1,21 @@
 :root {
-  --sg-primary: #ff6b35;
-  --sg-primary-dark: #e45c2c;
-  --sg-secondary: #2b2d42;
+  /* Colores principales con buen contraste WCAG AA */
+  --sg-primary: #e85a24;
+  --sg-primary-dark: #c44a1a;
+  --sg-primary-light: #ff7d4d;
+  --sg-secondary: #1f2937;
   --sg-surface: #ffffff;
-  --sg-muted: #6c757d;
-  --sg-soft: #f5f7fa;
+  --sg-muted: #4b5563; /* Mejorado para contraste 4.5:1+ */
+  --sg-soft: #f8fafc;
+  --sg-text: #111827;
+  --sg-text-light: #374151;
+  --sg-success: #047857;
+  --sg-success-light: #10b981;
+  --sg-warning: #b45309;
+  --sg-warning-light: #d97706;
+  --sg-danger: #b91c1c;
+  --sg-danger-light: #dc2626;
+  --sg-border: #e5e7eb;
   color-scheme: light;
 }
 
@@ -23,11 +34,13 @@ html {
 body {
   min-height: 100vh;
   margin: 0;
-  background: linear-gradient(180deg, rgba(247, 249, 252, 0.95) 0%, #ffffff 60%);
+  background: linear-gradient(180deg, rgba(248, 250, 252, 0.95) 0%, #ffffff 60%);
   font-family: "Manrope", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  color: #1a1c21;
+  color: var(--sg-text, #111827);
   display: flex;
   flex-direction: column;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 .page-wrapper {
@@ -340,16 +353,107 @@ body {
 }
 
 .badge-soft-success {
-  background: rgba(34, 197, 94, 0.12);
-  color: #15803d;
+  background: rgba(4, 120, 87, 0.12);
+  color: #047857;
 }
 
 .badge-soft-warning {
-  background: rgba(252, 211, 77, 0.18);
-  color: #b45309;
+  background: rgba(180, 83, 9, 0.12);
+  color: #92400e;
 }
 
 .badge-soft-danger {
-  background: rgba(248, 113, 113, 0.18);
-  color: #b91c1c;
+  background: rgba(185, 28, 28, 0.12);
+  color: #991b1b;
+}
+
+/* ===== RESPONSIVE MÓVIL - Mejoras generales ===== */
+
+/* Touch targets mínimo 44x44px para accesibilidad */
+.btn, 
+.nav-link, 
+.form-control, 
+.form-select,
+input[type="checkbox"],
+input[type="radio"] {
+  min-height: 44px;
+}
+
+/* Mejorar legibilidad en móvil */
+@media (max-width: 767.98px) {
+  html {
+    font-size: 14px;
+  }
+  
+  .container {
+    padding-left: 1rem;
+    padding-right: 1rem;
+  }
+  
+  h1, .h1 { font-size: 1.75rem; }
+  h2, .h2 { font-size: 1.5rem; }
+  h3, .h3 { font-size: 1.25rem; }
+  
+  .hero {
+    padding: 3rem 0 2rem;
+  }
+  
+  .hero h1 {
+    font-size: 1.75rem;
+  }
+  
+  .product-card {
+    padding: 0.75rem;
+  }
+  
+  .product-img-wrapper img {
+    height: 160px;
+  }
+  
+  .section-title {
+    font-size: 1.35rem;
+  }
+  
+  /* Espaciado móvil mejorado */
+  .py-5 { padding-top: 2rem !important; padding-bottom: 2rem !important; }
+  .my-5 { margin-top: 2rem !important; margin-bottom: 2rem !important; }
+  
+  /* Botones full-width en móvil */
+  .btn-mobile-full {
+    width: 100%;
+  }
+}
+
+/* Tablets */
+@media (min-width: 768px) and (max-width: 991.98px) {
+  .product-img-wrapper img {
+    height: 180px;
+  }
+}
+
+/* Focus visible para accesibilidad con teclado */
+:focus-visible {
+  outline: 3px solid var(--sg-primary);
+  outline-offset: 2px;
+}
+
+/* Reducir animaciones si el usuario lo prefiere */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* Mejoras de contraste para texto */
+.text-muted {
+  color: var(--sg-muted) !important;
+}
+
+.small, small {
+  font-size: 0.875rem;
+  color: var(--sg-text-light, #374151);
 }

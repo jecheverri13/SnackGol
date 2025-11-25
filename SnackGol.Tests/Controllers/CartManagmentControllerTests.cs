@@ -1,6 +1,5 @@
 using System.Net;
 using FluentAssertions;
-using System.Threading.Tasks;
 using LibraryConnection.Context;
 using LibraryConnection.DbSet;
 using Microsoft.AspNetCore.Http;
@@ -20,9 +19,7 @@ public class CartManagmentControllerTests
 
     private static CartManagmentController CreateControllerWithSession(string session)
     {
-        var db = new ApplicationDbContext();
-        var logger = new Microsoft.Extensions.Logging.Abstractions.NullLogger<CartManagmentController>();
-        var controller = new CartManagmentController(db, logger)
+        var controller = new CartManagmentController
         {
             ControllerContext = new ControllerContext
             {
@@ -36,10 +33,10 @@ public class CartManagmentControllerTests
     // Verifica que si no existe carrito para el token, GetCart lo cree y
     // responda 200 OK con el contenido.
     [Fact]
-    public async Task GetCart_CreatesCart_WhenMissing()
+    public void GetCart_CreatesCart_WhenMissing()
     {
         var controller = CreateControllerWithSession("s1");
-        var result = await controller.GetCart() as ObjectResult;
+        var result = controller.GetCart() as ObjectResult;
         result.Should().NotBeNull();
         result!.StatusCode.Should().Be((int)HttpStatusCode.OK);
     }
@@ -47,7 +44,7 @@ public class CartManagmentControllerTests
     // Verifica que al intentar agregar más unidades que el stock disponible,
     // el endpoint responde 409 Conflict.
     [Fact]
-    public async Task AddItem_InsufficientStock_Returns409()
+    public void AddItem_InsufficientStock_Returns409()
     {
         int createdProductId;
         using (var db = new ApplicationDbContext())
@@ -75,7 +72,7 @@ public class CartManagmentControllerTests
             product_id = createdProductId,
             quantity = 5
         };
-        var result = await controller.AddItem(body) as ObjectResult;
+        var result = controller.AddItem(body) as ObjectResult;
         result.Should().NotBeNull();
         result!.StatusCode.Should().Be((int)HttpStatusCode.Conflict);
     }

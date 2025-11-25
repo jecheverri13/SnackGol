@@ -1,0 +1,15 @@
+<svg width="200" height="200" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+  <!-- Fondo circular para el logo -->
+  <circle cx="100" cy="100" r="90" fill="#FF6B35" stroke="#333" stroke-width="4"/>
+  
+  <!-- Ícono de snack (dona simplificada) -->
+  <circle cx="100" cy="80" r="25" fill="#FFD700" stroke="#333" stroke-width="2"/>
+  <circle cx="100" cy="80" r="15" fill="#FF4500"/>
+  <circle cx="90" cy="75" r="3" fill="#FFF"/>
+  <circle cx="110" cy="75" r="3" fill="#FFF"/>
+  <circle cx="100" cy="85" r="3" fill="#FFF"/>
+  
+  <!-- Texto "SnackGol" -->
+  <text x="100" y="130" font-family="Arial, sans-serif" font-size="18" font-weight="bold" text-anchor="middle" fill="#FFF">SnackGol</text>
+  <text x="100" y="150" font-family="Arial, sans-serif" font-size="12" text-anchor="middle" fill="#FFF">¡Tu snack favorito!</text>
+</svg>

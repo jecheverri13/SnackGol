@@ -1,5 +1,6 @@
 ﻿using LibraryConnection.Dtos;
 using LibraryEntities.Models;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using MSSnackGolFrontend.Infrastructure;
 using System.Net.Http;
@@ -10,6 +11,7 @@ namespace MSSnackGolFrontend.Controllers
 {
     public class CarritoController : Controller
     {
+        private const string CheckoutConfirmationSessionKey = "CheckoutConfirmationPayload";
         private readonly IHttpClientFactory _httpClientFactory;
         private readonly ILogger<CarritoController> _logger;
         private static readonly JsonSerializerOptions _jsonOptions = new(JsonSerializerDefaults.Web)
@@ -149,7 +151,8 @@ namespace MSSnackGolFrontend.Controllers
                                     }
                             };
 
-                            TempData["CheckoutConfirmation"] = JsonSerializer.Serialize(confirmation, _jsonOptions);
+                                    var confirmationJson = JsonSerializer.Serialize(confirmation, _jsonOptions);
+                                    HttpContext.Session.SetString(CheckoutConfirmationSessionKey, confirmationJson);
                             TempData["CheckoutFlash"] = "Pedido confirmado. Presenta el QR en la zona de entrega.";
                             // Redirect user to QR confirmation page
                             return RedirectToAction("Confirmacion", "QR");

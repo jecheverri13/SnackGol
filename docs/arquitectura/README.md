@@ -121,6 +121,20 @@ CU-P04: Obtener producto por ID
 !include dinamica_cu_p04_obtener_producto.puml
 ```
 
+CU-P05: Generar QR de entrega
+
+```plantuml
+!include dinamica_cu_p05_generar_qr.puml
+```
+
+### Flujo "Generar QR de entrega"
+
+1. El cliente confirma el checkout desde el frontend MVC, que envía `session_token` al endpoint `POST /api/OrderManagement/Checkout`.
+2. La API valida stock, crea la orden y genera los artefactos del QR (payload Base64, hash del token y PNG con logo), persistiéndolos junto con la orden y limpiando el carrito.
+3. La respuesta 201 incluye `CheckoutResult.pickup` para renderizar la vista `QR/Confirmacion` en el frontend.
+4. En el punto de entrega se escanea el QR; el runner envía `POST /api/OrderManagement/{orderId}/pickup/validate` con el token del payload.
+5. El backend compara el hash (`pickup_token_hash`), marca la orden como `Delivered` y devuelve el estado actualizado que se muestra al runner.
+
 ## Vista conceptual
 
 Diagrama de conceptos (entidades y relaciones):

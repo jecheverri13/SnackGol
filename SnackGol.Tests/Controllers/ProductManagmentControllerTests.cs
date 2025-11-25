@@ -1,10 +1,8 @@
 using System.Net;
-using System.Threading.Tasks;
 using FluentAssertions;
 using LibraryConnection.Context;
 using LibraryConnection.DbSet;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.Extensions.Logging.Abstractions;
 using MSSnackGol.Controllers;
 using SnackGol.Tests.Utilities;
 using Xunit;
@@ -21,12 +19,11 @@ public class ProductManagmentControllerTests
     // Verifica que cuando no hay productos para la categoría/filtrado solicitado,
     // el endpoint de listado responde 204 No Content (sin cuerpo).
     [Fact]
-    public async Task List_NoProducts_Returns204()
+    public void List_NoProducts_Returns204()
     {
-        var controller = new ProductManagmentController(new ApplicationDbContext(), new NullLogger<ProductManagmentController>());
+        var controller = new ProductManagmentController();
         // Use a non-existent category to ensure empty result despite seed data
-        var action = await controller.List(999, null);
-        var result = action as ObjectResult;
+        var result = controller.List(999, null) as ObjectResult;
 
         result.Should().NotBeNull();
         result!.StatusCode.Should().Be((int)HttpStatusCode.NoContent);
@@ -34,11 +31,10 @@ public class ProductManagmentControllerTests
 
     // Verifica que al pedir un producto por id inexistente, la API responde 404 Not Found.
     [Fact]
-    public async Task GetById_NotFound_Returns404()
+    public void GetById_NotFound_Returns404()
     {
-        var controller = new ProductManagmentController(new ApplicationDbContext(), new NullLogger<ProductManagmentController>());
-        var action = await controller.GetById(12345);
-        var result = action as ObjectResult;
+        var controller = new ProductManagmentController();
+        var result = controller.GetById(12345) as ObjectResult;
 
         result.Should().NotBeNull();
         result!.StatusCode.Should().Be((int)HttpStatusCode.NotFound);
@@ -46,7 +42,7 @@ public class ProductManagmentControllerTests
 
     // Verifica que al existir el producto, GetById retorna 200 OK y un DTO válido.
     [Fact]
-    public async Task GetById_Found_Returns200_WithDto()
+    public void GetById_Found_Returns200_WithDto()
     {
         using (var db = new ApplicationDbContext())
         {
@@ -65,9 +61,8 @@ public class ProductManagmentControllerTests
             db.SaveChanges();
         }
 
-        var controller = new ProductManagmentController(new ApplicationDbContext(), new NullLogger<ProductManagmentController>());
-        var action = await controller.GetById(1);
-        var result = action as ObjectResult;
+        var controller = new ProductManagmentController();
+        var result = controller.GetById(1) as ObjectResult;
 
         result.Should().NotBeNull();
         result!.StatusCode.Should().Be((int)HttpStatusCode.OK);
