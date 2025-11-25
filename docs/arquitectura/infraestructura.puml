@@ -1,0 +1,61 @@
+@startuml Infraestructura
+title SnackGol - Vision general de la infraestructura
+
+!include theme_snackgol.puml
+
+actor "User" as User
+
+node "Client device" as ClientNode COL_CLIENT {
+  component "Web browser" as Browser COL_CLIENT
+}
+
+node "Frontend layer\nASP.NET Core MVC\n(MSSnackGolFrontend)" as FrontNode COL_API {
+  component "MSSnackGolFrontend (MVC)" as FrontApp COL_API
+}
+
+node "Application layer\nASP.NET Core 8 API\n(MSSnackGol)" as ApiNode COL_API {
+  component "ProductManagementController" as ProductCtrl COL_API
+  component "CartManagementController" as CartCtrl COL_API
+  component "OrderManagementController" as OrderCtrl COL_API
+  component "LoginManagementController" as LoginCtrl COL_API
+  component "ClientManagementController" as ClientCtrl COL_API
+
+  component "JWT middleware" as Jwt COL_AUTH
+
+  component "Telemetry (Azure App Insights)" as Telemetry COL_TELEM
+  component "Realtime (SignalR/SSE)" as Realtime COL_RT
+  component "Swagger / OpenAPI" as Swagger COL_LIB
+
+  component "LibraryAuthentication" as LibAuth COL_LIB
+  component "LibraryConnection" as LibConn COL_LIB
+  component "LibraryEntities" as LibEnt COL_LIB
+  component "LibraryEncrypt" as LibEnc COL_LIB
+}
+
+database "PostgreSQL 14+" as PG COL_DB
+
+User -[#3F51B5,thickness=2]-> Browser : HTTP/HTML
+Browser -[#1976D2,thickness=2]-> FrontApp : HTTPS
+FrontApp -[#1976D2,thickness=2]-> ProductCtrl : HTTPS / REST
+FrontApp -[#1976D2,thickness=2]-> CartCtrl : HTTPS / REST
+FrontApp -[#1976D2,thickness=2]-> OrderCtrl : HTTPS / REST
+FrontApp -[#1976D2,thickness=2]-> LoginCtrl : HTTPS / REST
+FrontApp -[#1976D2,thickness=2]-> ClientCtrl : HTTPS / REST
+
+LoginCtrl ..> Jwt : Authentication
+Jwt ..> LibAuth
+ProductCtrl ..> LibConn
+CartCtrl ..> LibConn
+OrderCtrl ..> LibConn
+ClientCtrl ..> LibConn
+LibConn ..> LibEnt
+LibConn ..> PG : EF Core (Npgsql)
+
+ApiNode ..> Telemetry : metrics / traces
+ApiNode ..> Realtime : stock notifications (optional)
+
+note bottom of PG
+  Schema: dev\nORM: Entity Framework Core\nProvider: Npgsql
+end note
+
+@enduml

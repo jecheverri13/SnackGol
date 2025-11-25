@@ -1,0 +1,94 @@
+@startuml dinamica_gestion_carrito
+' Optional: include shared theme if available in this path
+' !include ./theme_snackgol.puml
+!pragma useVerticalIf on
+
+actor Usuario as U
+participant "Navegador" as B
+participant "MVC Frontend\n(Controllers)" as MVC
+participant "API SnackGol\nCartManagmentController" as API
+database "DB\n(ApplicationDbContext)" as DB
+
+== Obtener carrito ==
+U -> B: Click "Ver carrito"
+B -> MVC: GET /cart
+MVC -> API: GET /api/CartManagment
+API -> DB: SELECT Cart por sesion/usuario
+DB --> API: Cart (si no existe -> null)
+alt Cart no existe
+  API -> DB: INSERT Cart (sesion/usuario)
+  DB --> API: OK
+end
+API -> DB: SELECT cart_items JOIN products
+DB --> API: Items + Productos
+API --> MVC: 200 OK { CartDto }
+MVC --> B: Render carrito
+
+== Agregar item ==
+U -> B: Agregar producto (qty)
+B -> MVC: POST /cart/items {product_id, qty}
+MVC -> API: POST /api/CartManagment/Items
+API -> DB: SELECT Product by id AND is_active
+DB --> API: Producto
+alt Stock insuficiente
+  API --> MVC: 409 Conflict
+  MVC --> B: Notifica stock insuficiente
+else Item no existe en el carrito
+  API -> DB: INSERT cart_item (qty, unit_price, subtotal)
+  DB --> API: OK
+else Item ya existe
+  API -> DB: UPDATE cart_item +qty (verifica stock)
+  DB --> API: OK
+end
+API -> DB: UPDATE cart.updated_at
+DB --> API: OK
+API -> DB: SELECT cart_items JOIN products
+DB --> API: Items
+API --> MVC: 200 OK { CartDto }
+MVC --> B: Actualiza vista
+
+== Actualizar item ==
+U -> B: Cambiar cantidad
+B -> MVC: PATCH /cart/items/{id} {qty}
+MVC -> API: PATCH /api/CartManagment/Items/{id}
+API -> DB: SELECT cart_item INCLUDE Cart
+DB --> API: cart_item + Cart
+alt No pertenece a la sesion/usuario
+  API --> MVC: 403 Forbidden
+else qty = 0
+  API -> DB: DELETE cart_item
+  DB --> API: OK
+else Verificar stock
+  API -> DB: SELECT Product
+  DB --> API: Producto
+  alt Stock insuficiente
+    API --> MVC: 409 Conflict
+  else
+    API -> DB: UPDATE cart_item (qty, unit_price, subtotal)
+    DB --> API: OK
+  end
+end
+API -> DB: UPDATE cart.updated_at
+DB --> API: OK
+API -> DB: SELECT cart_items JOIN products
+DB --> API: Items
+API --> MVC: 200 OK { CartDto }
+MVC --> B: Refresca carrito
+
+== Eliminar item ==
+U -> B: Eliminar item
+B -> MVC: DELETE /cart/items/{id}
+MVC -> API: DELETE /api/CartManagment/Items/{id}
+API -> DB: SELECT cart_item INCLUDE Cart
+DB --> API: cart_item + Cart
+alt No pertenece a la sesion/usuario
+  API --> MVC: 403 Forbidden
+else
+  API -> DB: DELETE cart_item
+  DB --> API: OK
+  API -> DB: SELECT cart_items JOIN products
+  DB --> API: Items
+  API --> MVC: 200 OK { CartDto }
+  MVC --> B: Refresca carrito
+end
+@enduml

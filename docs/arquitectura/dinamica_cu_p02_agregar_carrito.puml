@@ -1,0 +1,41 @@
+@startuml CU-P02
+title CU-P02: Agregar producto al carrito
+
+!include theme_snackgol.puml
+
+actor "Espectador" as User
+participant "Web UI (ASP.NET Core MVC)" as UI
+participant "CartManagmentController" as Controller
+participant "CartService" as Service
+participant "ProductRepository" as ProdRepo
+participant "CartRepository" as CartRepo
+participant "ApplicationDbContext" as DbContext
+database "PostgreSQL" as PG
+
+User -> UI : Selecciona producto y cantidad
+UI -> Controller : POST /api/CartManagment/Items\n{ product_id, quantity }
+Controller -> Service : AgregarAlCarrito(product_id, qty, session)
+Service -> ProdRepo : ObtenerProducto(product_id)
+ProdRepo -> DbContext : SELECT product by id
+DbContext -> PG : SELECT ... FROM products WHERE id = ?
+PG --> DbContext : fila producto
+DbContext --> ProdRepo : entidad Product
+alt Stock suficiente
+  Service -> CartRepo : AgregarItem(cartId, product, qty)
+  CartRepo -> DbContext : INSERT cart_item + UPDATE subtotal
+  DbContext -> PG : INSERT/UPDATE
+  PG --> DbContext : OK
+  DbContext --> CartRepo : OK
+  CartRepo --> Service : Item agregado
+  Service --> Controller : Resultado OK
+  Controller --> UI : 201 Created
+  UI -> UI : Incrementar contador del carrito
+  UI --> User : Confirmacion visual (toast)
+else Sin stock
+  Service --> Controller : Error 400 (stock insuficiente)
+  Controller --> UI : 400 Bad Request
+  UI -> UI : Deshabilitar boton "Agregar" temporalmente
+  UI --> User : Mensaje de error
+end
+
+@enduml

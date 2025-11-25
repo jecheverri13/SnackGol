@@ -1,0 +1,43 @@
+@startuml CU-P04
+title CU-P04: Obtener producto
+
+!include theme_snackgol.puml
+
+actor "Espectador/Proveedor" as Actor
+participant "Web UI (ASP.NET Core MVC)" as UI
+participant "ProductManagmentController" as Controller
+participant "ProductService" as Service
+participant "ProductRepository" as Repo
+participant "ApplicationDbContext" as DbContext
+database "PostgreSQL" as PG
+
+== Solicitud ==
+Actor -> UI : Solicita producto por ID/codigo/nombre
+UI -> Controller : GET /api/ProductManagment/{id|code|name}
+Controller -> Service : ObtenerProducto(identificador)
+Service -> Repo : GetByIdentifier(identificador)
+Repo -> DbContext : Consulta por clave (id/codigo/nombre)
+DbContext -> PG : SELECT ... WHERE id=? OR code=? OR name=?
+PG --> DbContext : fila (si existe)
+DbContext --> Repo : entidad Product
+
+alt Producto existe
+  Repo --> Service : Product
+  Service --> Controller : ProductDto
+  Controller --> UI : 200 OK + JSON
+  UI --> Actor : Muestra nombre, imagen, precio, stock, descripcion, punto de venta
+else Producto no encontrado
+  Repo --> Service : null
+  Service --> Controller : NotFound
+  Controller --> UI : 404 Not Found
+  UI --> Actor : "Producto no encontrado"
+end
+
+alt Error BD / timeout
+  DbContext --> Repo : excepcion
+  Service --> Controller : Error
+  Controller --> UI : 500 / retry-after
+  UI -> UI : Mostrar error y reintentar (backoff)
+end
+
+@enduml

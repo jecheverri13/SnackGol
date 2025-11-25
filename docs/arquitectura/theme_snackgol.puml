@@ -1,0 +1,18 @@
+!pragma includeonly
+' SnackGol common theme (include-only)
+' Do not wrap with @startuml/@enduml
+
+skinparam shadowing false
+skinparam componentStyle rectangle
+skinparam packageStyle rectangle
+skinparam classAttributeIconSize 0
+skinparam backgroundColor #FBFBFD
+
+' Color palette
+!define COL_CLIENT #E3F2FD
+!define COL_API    #EDE7F6
+!define COL_DB     #E8F5E9
+!define COL_LIB    #FFFDE7
+!define COL_AUTH   #FFEBEE
+!define COL_TELEM  #E0F7FA
+!define COL_RT     #FFF3E0
