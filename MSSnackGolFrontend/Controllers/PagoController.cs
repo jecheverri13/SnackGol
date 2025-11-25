@@ -108,8 +108,9 @@ namespace MSSnackGolFrontend.Controllers
                             {
                                 Code = codigoConfirmacion,
                                 GeneratedAtUtc = DateTime.UtcNow,
-                                PayloadBase64 = null, // Se generará en la vista si es necesario
-                                QrImageBase64 = null  // Se generará en la vista si es necesario
+                                // Generar un payload JSON simple que la vista puede convertir a QR
+                                PayloadBase64 = GeneratePayloadBase64(codigoConfirmacion, (double)modelo.Total),
+                                QrImageBase64 = null  // Se generará en la vista desde el payload
                             }
                         };
 
@@ -246,6 +247,34 @@ namespace MSSnackGolFrontend.Controllers
             {
                 _logger.LogError($"Error al crear/verificar cliente en el backend: {ex.Message}");
                 // No lanzar excepción - continuar con el flujo
+            }
+        }
+
+        /// <summary>
+        /// Genera un payload JSON codificado en Base64 para el QR
+        /// </summary>
+        private string GeneratePayloadBase64(string codigoConfirmacion, double total)
+        {
+            try
+            {
+                var payload = new
+                {
+                    OrderId = codigoConfirmacion,
+                    PickupCode = codigoConfirmacion,
+                    Amount = total,
+                    Currency = "COP",
+                    GeneratedAt = DateTime.UtcNow.ToString("O"),
+                    Type = "SnackGolPickup"
+                };
+
+                var jsonPayload = JsonSerializer.Serialize(payload);
+                var payloadBytes = System.Text.Encoding.UTF8.GetBytes(jsonPayload);
+                return Convert.ToBase64String(payloadBytes);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError($"Error al generar payload Base64: {ex.Message}");
+                return string.Empty;
             }
         }
 
