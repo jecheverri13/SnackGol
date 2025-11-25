@@ -8,6 +8,9 @@
     var pickupCode = TempData["PickupCode"] as string;
     var pickupStatus = TempData["PickupStatus"] as string;
     var orderId = TempData["OrderId"] as string;
+    var subtotal = Model.Cart?.total ?? 0;
+    var isCartEmpty = Model.Cart?.items == null || Model.Cart.items.Count == 0;
+    var disabledAttr = isCartEmpty ? "disabled" : null;
 }
 
 <div class="container py-4 py-lg-5">
@@ -225,10 +228,11 @@
 
                     <div class="text-muted small mb-2">Moneda: COP</div>
 
-                    <form asp-action="ProcederPago" method="post" class="d-grid gap-2">
-                        <button class="btn btn-dark btn-lg" @(Model.Cart?.items == null || Model.Cart.items.Count == 0 ? "disabled" : null)>Proceder con el Pago</button>
-                        <a href="~/" class="btn btn-outline-secondary">Continuar comprando</a>
+                    <form method="get" action="@Url.Action("ConfirmarPago", "Pago")" class="mb-2">
+                        <input type="hidden" name="subtotal" value="@subtotal" />
+                        <button type="submit" class="btn btn-dark btn-lg d-grid w-100" @(isCartEmpty ? "disabled" : "")>Proceder con el Pago</button>
                     </form>
+                    <a href="~/" class="btn btn-outline-secondary">Continuar comprando</a>
                 </div>
             </div>
         </div>
@@ -241,8 +245,9 @@
                     <div class="small text-muted">Total</div>
                     <div class="fw-bold">@((Model.Cart?.total ?? 0).ToString("C0", co))</div>
                 </div>
-                <form asp-action="ProcederPago" method="post">
-                    <button class="btn btn-dark" @(Model.Cart?.items == null || Model.Cart.items.Count == 0 ? "disabled" : null)>Pagar</button>
+                <form method="get" action="@Url.Action("ConfirmarPago", "Pago")" style="margin: 0;">
+                    <input type="hidden" name="subtotal" value="@subtotal" />
+                    <button type="submit" class="btn btn-dark" @(isCartEmpty ? "disabled" : "")>Pagar</button>
                 </form>
             </div>
         </div>
