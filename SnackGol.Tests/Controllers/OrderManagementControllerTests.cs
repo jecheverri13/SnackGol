@@ -11,6 +11,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using MSSnackGol.Controllers;
+using MSSnackGol.Services;
 using SnackGol.Tests.Utilities;
 using Xunit;
 using Microsoft.EntityFrameworkCore;
@@ -29,7 +30,8 @@ public class OrderManagementControllerTests
     private static OrderManagementController CreateController()
     {
         var logger = new LoggerFactory().CreateLogger<OrderManagementController>();
-        var controller = new OrderManagementController(logger)
+        var qrService = new QRGeneratorService();
+        var controller = new OrderManagementController(logger, qrService)
         {
             ControllerContext = new ControllerContext
             {
@@ -94,7 +96,7 @@ public class OrderManagementControllerTests
         verify.products.Single(x => x.name == "Agua_UnitTest").stock.Should().Be(3); // 5 - 2
 
         var storedOrder = verify.orders.Include(o => o.OrderLines).Single(o => o.order_id == checkoutResult.orderId);
-        storedOrder.status.Should().Be("ReadyForPickup");
+        storedOrder.status.Should().Be("Confirmed"); // Estado inicial correcto: Confirmado
         storedOrder.pickup_code.Should().NotBeNullOrWhiteSpace();
         storedOrder.pickup_token_hash.Should().NotBeNullOrWhiteSpace();
         storedOrder.pickup_payload_base64.Should().NotBeNullOrWhiteSpace();

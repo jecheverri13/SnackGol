@@ -7,12 +7,8 @@ using Microsoft.AspNetCore.Mvc;
 using System.Net;
 using Microsoft.EntityFrameworkCore;
 using System.Globalization;
-using System.Security.Cryptography;
-using System.Text;
 using System.Text.Json;
-using System.Linq;
-using QRCoder;
-using SkiaSharp;
+using MSSnackGol.Services;
 
 namespace MSSnackGol.Controllers
 {
@@ -21,17 +17,21 @@ namespace MSSnackGol.Controllers
     public class OrderManagementController : ControllerBase
     {
         private readonly ILogger<OrderManagementController> _logger;
+        private readonly IQRGeneratorService _qrService;
         private static readonly JsonSerializerOptions PickupJsonOptions = new(JsonSerializerDefaults.Web)
         {
             PropertyNameCaseInsensitive = true
         };
 
+        private const string StatusConfirmed = "Confirmed";
+        private const string StatusPreparing = "Preparing";
         private const string StatusReadyForPickup = "ReadyForPickup";
         private const string StatusDelivered = "Delivered";
 
-        public OrderManagementController(ILogger<OrderManagementController> logger)
+        public OrderManagementController(ILogger<OrderManagementController> logger, IQRGeneratorService qrService)
         {
             _logger = logger;
+            _qrService = qrService;
         }
 
         [HttpPost("Create")]
@@ -112,6 +112,222 @@ namespace MSSnackGol.Controllers
                 );
             }
         }
+
+        /// <summary>
+        /// Elimina todos los pedidos (solo para desarrollo/testing).
+        /// </summary>
+        [HttpDelete("All")]
+        public IActionResult DeleteAllOrders()
+        {
+            try
+            {
+                using var db = new ApplicationDbContext();
+                
+                // Cargar pedidos con sus líneas
+                var orders = db.orders.Include(o => o.OrderLines).ToList();
+                var lineCount = orders.Sum(o => o.OrderLines?.Count ?? 0);
+                
+                // Eliminar pedidos (las líneas se eliminan en cascada si está configurado)
+                db.orders.RemoveRange(orders);
+                db.SaveChanges();
+                
+                _logger.LogWarning("Se eliminaron {OrderCount} pedidos y {LineCount} líneas de pedido", 
+                    orders.Count, lineCount);
+                
+                return StatusCode((int)HttpStatusCode.OK, 
+                    new Response<dynamic>(true, HttpStatusCode.OK, new
+                    {
+                        message = "Todos los pedidos han sido eliminados",
+                        ordersDeleted = orders.Count,
+                        linesDeleted = lineCount
+                    }));
+            }
+            catch (Exception ex)
+            {
+                const string errorMessage = "Error al eliminar los pedidos";
+                _logger.LogError(ex, "{ErrorMessage}", errorMessage);
+                return StatusCode((int)HttpStatusCode.InternalServerError, 
+                    new Response<dynamic>(false, HttpStatusCode.InternalServerError, errorMessage, ex.Message));
+            }
+        }
+
+        /// <summary>
+        /// Obtiene los pedidos asociados a un token de sesión (para usuarios no autenticados).
+        /// </summary>
+        [HttpGet("Session/{sessionToken}")]
+        public IActionResult GetOrdersBySession(string sessionToken)
+        {
+            if (string.IsNullOrWhiteSpace(sessionToken))
+            {
+                return StatusCode((int)HttpStatusCode.BadRequest, 
+                    new Response<dynamic>(false, HttpStatusCode.BadRequest, "Token de sesión requerido"));
+            }
+
+            try
+            {
+                using var db = new ApplicationDbContext();
+                
+                var ordersRaw = db.orders
+                    .Include(o => o.OrderLines)
+                    .Where(o => o.customer_id == sessionToken)
+                    .OrderByDescending(o => o.order_date)
+                    .ToList();
+
+                var orders = ordersRaw.Select(o => new
+                {
+                    orderId = o.order_id,
+                    status = o.status ?? StatusConfirmed,
+                    total = o.total_net_price,
+                    orderDate = o.order_date,
+                    pickupCode = o.pickup_code,
+                    itemCount = o.OrderLines?.Sum(ol => (int)ol.quantity) ?? 0,
+                    items = (o.OrderLines ?? Enumerable.Empty<OrderLine>()).Select(ol => new
+                    {
+                        productName = ol.description ?? "Producto",
+                        quantity = (int)ol.quantity,
+                        unitPrice = ol.quantity > 0 ? ol.net_price / ol.quantity : ol.net_price,
+                        subtotal = ol.net_price
+                    }).ToList()
+                }).ToList();
+
+                if (!orders.Any())
+                {
+                    return StatusCode((int)HttpStatusCode.NotFound, 
+                        new Response<dynamic>(false, HttpStatusCode.NotFound, "No se encontraron pedidos para esta sesión"));
+                }
+
+                return StatusCode((int)HttpStatusCode.OK, 
+                    new Response<dynamic>(true, HttpStatusCode.OK, orders));
+            }
+            catch (Exception ex)
+            {
+                const string errorMessage = "Error al obtener los pedidos de la sesión";
+                _logger.LogError(ex, "{ErrorMessage}", errorMessage);
+                return StatusCode((int)HttpStatusCode.InternalServerError, 
+                    new Response<dynamic>(false, HttpStatusCode.InternalServerError, errorMessage, ex.Message));
+            }
+        }
+
+        /// <summary>
+        /// Actualiza el estado de un pedido. 
+        /// Estados válidos: Confirmed → Preparing → ReadyForPickup → Delivered
+        /// Este endpoint es para uso del staff/administrador.
+        /// </summary>
+        [HttpPatch("{orderId}/status")]
+        public IActionResult UpdateOrderStatus(string orderId, [FromBody] UpdateStatusRequest request)
+        {
+            if (request == null || string.IsNullOrWhiteSpace(request.NewStatus))
+            {
+                return StatusCode((int)HttpStatusCode.BadRequest, 
+                    new Response<dynamic>(false, HttpStatusCode.BadRequest, "Estado requerido"));
+            }
+
+            // Validar que el estado sea uno de los permitidos
+            var validStatuses = new[] { StatusConfirmed, StatusPreparing, StatusReadyForPickup, StatusDelivered };
+            if (!validStatuses.Contains(request.NewStatus, StringComparer.OrdinalIgnoreCase))
+            {
+                return StatusCode((int)HttpStatusCode.BadRequest, 
+                    new Response<dynamic>(false, HttpStatusCode.BadRequest, 
+                        $"Estado inválido. Estados permitidos: {string.Join(", ", validStatuses)}"));
+            }
+
+            try
+            {
+                using var db = new ApplicationDbContext();
+                var order = db.orders.FirstOrDefault(o => o.order_id == orderId);
+
+                if (order == null)
+                {
+                    return StatusCode((int)HttpStatusCode.NotFound, 
+                        new Response<dynamic>(false, HttpStatusCode.NotFound, "Orden no encontrada"));
+                }
+
+                // Validar transición de estado (no se puede retroceder)
+                var currentIndex = Array.FindIndex(validStatuses, s => s.Equals(order.status, StringComparison.OrdinalIgnoreCase));
+                var newIndex = Array.FindIndex(validStatuses, s => s.Equals(request.NewStatus, StringComparison.OrdinalIgnoreCase));
+
+                if (newIndex < currentIndex && !request.ForceUpdate)
+                {
+                    return StatusCode((int)HttpStatusCode.BadRequest, 
+                        new Response<dynamic>(false, HttpStatusCode.BadRequest, 
+                            $"No se puede retroceder el estado de '{order.status}' a '{request.NewStatus}'"));
+                }
+
+                var previousStatus = order.status;
+                order.status = validStatuses[newIndex]; // Normalizar el estado
+
+                // Si se marca como entregado, registrar la fecha
+                if (order.status == StatusDelivered && order.pickup_redeemed_at == null)
+                {
+                    order.pickup_redeemed_at = DateTime.UtcNow;
+                    order.pickup_verified_by = request.UpdatedBy;
+                }
+
+                db.SaveChanges();
+
+                _logger.LogInformation("Orden {OrderId} actualizada de '{PreviousStatus}' a '{NewStatus}' por {UpdatedBy}",
+                    orderId, previousStatus, order.status, request.UpdatedBy ?? "Sistema");
+
+                return StatusCode((int)HttpStatusCode.OK, 
+                    new Response<dynamic>(true, HttpStatusCode.OK, new
+                    {
+                        orderId = order.order_id,
+                        previousStatus,
+                        newStatus = order.status,
+                        updatedAt = DateTime.UtcNow
+                    }));
+            }
+            catch (Exception ex)
+            {
+                const string errorMessage = "Error al actualizar el estado del pedido";
+                _logger.LogError(ex, "{ErrorMessage}", errorMessage);
+                return StatusCode((int)HttpStatusCode.InternalServerError, 
+                    new Response<dynamic>(false, HttpStatusCode.InternalServerError, errorMessage, ex.Message));
+            }
+        }
+
+        /// <summary>
+        /// Obtiene todos los pedidos activos (no entregados) para el panel de administración.
+        /// </summary>
+        [HttpGet("Active")]
+        public IActionResult GetActiveOrders()
+        {
+            try
+            {
+                using var db = new ApplicationDbContext();
+                
+                var activeOrders = db.orders
+                    .Include(o => o.OrderLines)
+                    .Where(o => o.status != StatusDelivered)
+                    .OrderBy(o => o.order_date)
+                    .Select(o => new
+                    {
+                        orderId = o.order_id,
+                        status = o.status ?? StatusConfirmed,
+                        total = o.total_net_price,
+                        orderDate = o.order_date,
+                        pickupCode = o.pickup_code,
+                        itemCount = o.OrderLines != null ? o.OrderLines.Sum(ol => (int)ol.quantity) : 0,
+                        items = o.OrderLines != null ? o.OrderLines.Select(ol => new
+                        {
+                            item = ol.item,
+                            description = ol.description,
+                            quantity = ol.quantity
+                        }).ToList() : null
+                    })
+                    .ToList();
+
+                return StatusCode((int)HttpStatusCode.OK, 
+                    new Response<dynamic>(true, HttpStatusCode.OK, activeOrders));
+            }
+            catch (Exception ex)
+            {
+                const string errorMessage = "Error al obtener los pedidos activos";
+                _logger.LogError(ex, "{ErrorMessage}", errorMessage);
+                return StatusCode((int)HttpStatusCode.InternalServerError, 
+                    new Response<dynamic>(false, HttpStatusCode.InternalServerError, errorMessage, ex.Message));
+            }
+        }
         
         /// <summary>
         /// Realiza el checkout del carrito actual, genera la orden y prepara el QR de retiro.
@@ -175,13 +391,13 @@ namespace MSSnackGol.Controllers
 
                 EnsureClientRecord(db, customerId, userId);
 
-                var orderId = GenerateOrderId();
+                var orderId = _qrService.GenerateOrderId();
                 var order = new Order
                 {
                     order_id = orderId,
                     customer_id = customerId,
                     order_date = DateTime.UtcNow,
-                    status = StatusReadyForPickup,
+                    status = StatusConfirmed,
                     total_gross_amount = total,
                     total_net_price = total,
                     OrderLines = items.Select((it, index) => new OrderLine
@@ -196,11 +412,11 @@ namespace MSSnackGol.Controllers
                     }).ToList()
                 };
 
-                var pickupCode = GeneratePickupCode();
-                var artifacts = BuildPickupArtifacts(orderId, pickupCode, session, items);
+                var pickupCode = _qrService.GeneratePickupCode();
+                var artifacts = _qrService.GeneratePickupArtifacts(orderId, pickupCode, session, items);
 
                 order.pickup_code = pickupCode;
-                order.pickup_token_hash = HashToken(artifacts.Token);
+                order.pickup_token_hash = _qrService.HashToken(artifacts.Token);
                 order.pickup_payload_base64 = artifacts.PayloadBase64;
                 order.pickup_qr_base64 = artifacts.QrImageBase64;
                 order.pickup_generated_at = DateTime.UtcNow;
@@ -225,7 +441,7 @@ namespace MSSnackGol.Controllers
                 var result = new CheckoutResult
                 {
                     orderId = orderId,
-                    status = order.status ?? StatusReadyForPickup,
+                    status = order.status ?? StatusConfirmed,
                     total = total,
                     pickup = pickupInfo
                 };
@@ -308,7 +524,7 @@ namespace MSSnackGol.Controllers
                     return StatusCode((int)HttpStatusCode.NotFound, new Response<dynamic>(false, HttpStatusCode.NotFound, "La orden no tiene un token de retiro activo"));
                 }
 
-                if (!HashToken(request.token!).Equals(order.pickup_token_hash, StringComparison.OrdinalIgnoreCase))
+                if (!_qrService.ValidateToken(request.token!, order.pickup_token_hash))
                 {
                     return StatusCode((int)HttpStatusCode.Forbidden, new Response<dynamic>(false, HttpStatusCode.Forbidden, "Token inválido para esta orden"));
                 }
@@ -378,160 +594,34 @@ namespace MSSnackGol.Controllers
             db.clients.Add(client);
         }
 
-        private static string GenerateOrderId()
+        /// <summary>
+        /// Resetea el stock de todos los productos a 100 unidades (para desarrollo/testing)
+        /// </summary>
+        [HttpPost("ResetStock")]
+        public IActionResult ResetStock()
         {
-            return $"ORD-{DateTime.UtcNow:yyyyMMddHHmmss}-{RandomNumberGenerator.GetInt32(1000, 9999)}";
-        }
-
-        private static string GeneratePickupCode()
-        {
-            return $"SG-{DateTime.UtcNow:yyMMddHHmmss}-{RandomNumberGenerator.GetInt32(1000, 9999)}";
-        }
-
-        private static string HashToken(string token)
-        {
-            var bytes = SHA256.HashData(Encoding.UTF8.GetBytes(token));
-            return Convert.ToHexString(bytes);
-        }
-
-        private static (string Token, string PayloadBase64, string QrImageBase64) BuildPickupArtifacts(string orderId, string pickupCode, string? sessionToken, List<CartItem> items)
-        {
-            items ??= new List<CartItem>();
-
-            var token = Convert.ToHexString(RandomNumberGenerator.GetBytes(16));
-            var payload = new PickupPayload(orderId, pickupCode, token, sessionToken, DateTime.UtcNow);
-            var payloadJson = JsonSerializer.Serialize(payload, PickupJsonOptions);
-            var payloadBase64 = Convert.ToBase64String(Encoding.UTF8.GetBytes(payloadJson));
-
-            // Construir contenido legible para el QR (lista resumida que cualquier escáner interpreta)
-            var sb = new StringBuilder();
-            sb.AppendLine("SnackGol - Pedido confirmado");
-            sb.AppendLine($"Orden: {orderId}");
-            sb.AppendLine($"Código: {pickupCode}");
-            sb.AppendLine("----------------");
-            if (items.Count == 0)
+            try
             {
-                sb.AppendLine("Detalle no disponible");
-            }
-            else
-            {
-                foreach (var item in items)
+                using var db = new ApplicationDbContext();
+                var products = db.products.ToList();
+                
+                foreach (var product in products)
                 {
-                    var label = string.IsNullOrWhiteSpace(item.Product?.name)
-                        ? $"Producto #{item.product_id}"
-                        : item.Product!.name;
-                    sb.AppendLine($"{item.quantity}x {label}");
+                    product.stock = 100;
                 }
+                
+                db.SaveChanges();
+                
+                return Ok(new { success = true, productsUpdated = products.Count, newStock = 100 });
             }
-
-            sb.AppendLine("----------------");
-            var totalFormatted = (items.Sum(i => i.subtotal)).ToString("C0", new CultureInfo("es-CO"));
-            sb.AppendLine($"Total: {totalFormatted}");
-            sb.AppendLine("Presenta este QR en SnackGol para retirar tu pedido.");
-
-            var qrContent = sb.ToString();
-
-            var qrGenerator = new QRCodeGenerator();
-            var qrData = qrGenerator.CreateQrCode(qrContent, QRCodeGenerator.ECCLevel.H); // Mayor corrección para soportar el logo
-
-            // Color oscuro personalizado manteniendo alto contraste
-            var brandDark = new byte[] { 32, 35, 45 };
-            var pngQr = new PngByteQRCode(qrData).GetGraphic(20, brandDark, new byte[] { 255, 255, 255 }, true);
-
-            using var logoBitmap = GenerateLogoBitmap(120, 120);
-            var qrWithLogo = OverlayLogoOnQr(pngQr, logoBitmap);
-
-            var qrImageBase64 = Convert.ToBase64String(qrWithLogo);
-
-            return (token, payloadBase64, qrImageBase64);
-        }
-
-        private static SKBitmap GenerateLogoBitmap(int width, int height)
-        {
-            var bitmap = new SKBitmap(width, height);
-            using var canvas = new SKCanvas(bitmap);
-            canvas.Clear(SKColors.Transparent);
-
-            // Dibujar círculo de fondo
-            var paint = new SKPaint { Color = new SKColor(255, 107, 53), IsAntialias = true };
-            canvas.DrawCircle(width / 2, height / 2, width / 2 - 5, paint);
-
-            // Dibujar dona
-            paint.Color = SKColors.Gold;
-            canvas.DrawCircle(width / 2, height / 2 - 10, 15, paint);
-            paint.Color = SKColors.OrangeRed;
-            canvas.DrawCircle(width / 2, height / 2 - 10, 10, paint);
-
-            // Ojos
-            paint.Color = SKColors.White;
-            canvas.DrawCircle(width / 2 - 5, height / 2 - 15, 2, paint);
-            canvas.DrawCircle(width / 2 + 5, height / 2 - 15, 2, paint);
-            canvas.DrawCircle(width / 2, height / 2 - 5, 2, paint);
-
-            // Texto
-            paint.Color = SKColors.White;
-            paint.TextSize = 12;
-            paint.TextAlign = SKTextAlign.Center;
-            canvas.DrawText("SnackGol", width / 2, height / 2 + 20, paint);
-            paint.TextSize = 8;
-            canvas.DrawText("¡Tu snack favorito!", width / 2, height / 2 + 35, paint);
-
-            return bitmap;
-        }
-
-        private static byte[] OverlayLogoOnQr(byte[] qrBytes, SKBitmap logo)
-        {
-            using var qrStream = new MemoryStream(qrBytes);
-            using var qrBitmap = SKBitmap.Decode(qrStream);
-            using var canvas = new SKCanvas(qrBitmap);
-
-            var logoSize = Math.Min(qrBitmap.Width, qrBitmap.Height) / 5f; // Logo ocupa 20% del QR
-            var logoRect = new SKRect(
-                (qrBitmap.Width - logoSize) / 2f,
-                (qrBitmap.Height - logoSize) / 2f,
-                (qrBitmap.Width + logoSize) / 2f,
-                (qrBitmap.Height + logoSize) / 2f
-            );
-
-            var cornerRadius = logoSize * 0.25f;
-
-            using (var backgroundPaint = new SKPaint
+            catch (Exception ex)
             {
-                Color = SKColors.White,
-                IsAntialias = true
-            })
-            {
-                canvas.DrawRoundRect(logoRect, cornerRadius, cornerRadius, backgroundPaint);
+                _logger.LogError(ex, "Error al resetear stock");
+                return StatusCode(
+                    (int)HttpStatusCode.InternalServerError,
+                    new Response<dynamic>(false, HttpStatusCode.InternalServerError, "Error al resetear stock", ex.Message)
+                );
             }
-
-            var inset = logoSize * 0.08f;
-            var innerRect = new SKRect(
-                logoRect.Left + inset,
-                logoRect.Top + inset,
-                logoRect.Right - inset,
-                logoRect.Bottom - inset
-            );
-
-            using (var borderPaint = new SKPaint
-            {
-                Color = new SKColor(255, 107, 53),
-                Style = SKPaintStyle.Stroke,
-                StrokeWidth = Math.Max(2f, logoSize * 0.06f),
-                IsAntialias = true
-            })
-            {
-                canvas.DrawRoundRect(innerRect, cornerRadius * 0.9f, cornerRadius * 0.9f, borderPaint);
-            }
-
-            canvas.DrawBitmap(logo, innerRect);
-            canvas.Flush();
-
-            using var outputStream = new MemoryStream();
-            qrBitmap.Encode(outputStream, SKEncodedImageFormat.Png, 100);
-            return outputStream.ToArray();
         }
-
-        private record PickupPayload(string OrderId, string PickupCode, string Token, string? SessionToken, DateTime GeneratedAtUtc);
     }
 }
-
