@@ -55,7 +55,8 @@
                         <input type="text" class="form-control" id="numeroCuentaNequi" name="numeroCuentaNequi" 
                                placeholder="3xxxxxxxxx" pattern="^3\d{9}$" maxlength="10"
                                title="Debe ser 10 dígitos comenzando con 3" />
-                        <small class="form-text text-muted">Número de Celular no válido</small>
+                        <small class="form-text text-muted" id="nequiHint">Número de Celular no válido</small>
+                        <small class="form-text text-danger" id="nequiError" style="display: none;"></small>
                     </div>
 
                     <!-- Campo para Tarjeta de Crédito -->
@@ -65,7 +66,8 @@
                                placeholder="XXXX XXXX XXXX XXXX" maxlength="19"
                                title="Ingrese un número de tarjeta válido"
                                onkeyup="formatCreditCard(this)" />
-                        <small class="form-text text-muted">Número de Tarjeta No válido</small>
+                        <small class="form-text text-muted" id="tarjetaHint">Número de Tarjeta No válido</small>
+                        <small class="form-text text-danger" id="tarjetaError" style="display: none;"></small>
                     </div>
 
                     <!-- Botones de acción -->
@@ -130,13 +132,20 @@
             const metodoPago = document.getElementById('metodoPago').value;
             const numeroCuentaNequi = document.getElementById('numeroCuentaNequi').value;
             const numeroTarjeta = document.getElementById('numeroTarjeta').value;
+            const nequiError = document.getElementById('nequiError');
+            const tarjetaError = document.getElementById('tarjetaError');
 
             // Validar Nequi
             if (metodoPago === 'nequi') {
                 const nequiPattern = /^3\d{9}$/;
                 if (!nequiPattern.test(numeroCuentaNequi)) {
-                    alert('Número de Nequi inválido. Debe ser 10 dígitos comenzando con 3.');
+                    nequiError.textContent = 'Número de Nequi inválido. Debe ser 10 dígitos comenzando con 3.';
+                    nequiError.style.display = 'block';
+                    document.getElementById('numeroCuentaNequi').classList.add('is-invalid');
                     return;
+                } else {
+                    nequiError.style.display = 'none';
+                    document.getElementById('numeroCuentaNequi').classList.remove('is-invalid');
                 }
             }
 
@@ -144,8 +153,13 @@
             if (metodoPago === 'tarjeta') {
                 const cardNumber = numeroTarjeta.replace(/\s+/g, '');
                 if (!isValidCreditCard(cardNumber)) {
-                    alert('Número de tarjeta de crédito inválido.');
+                    tarjetaError.textContent = 'Número de tarjeta de crédito inválido.';
+                    tarjetaError.style.display = 'block';
+                    document.getElementById('numeroTarjeta').classList.add('is-invalid');
                     return;
+                } else {
+                    tarjetaError.style.display = 'none';
+                    document.getElementById('numeroTarjeta').classList.remove('is-invalid');
                 }
             }
 
