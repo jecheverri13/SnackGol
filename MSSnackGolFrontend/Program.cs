@@ -1,10 +1,19 @@
 ﻿using MSSnackGolFrontend.Services;
+using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc.Authorization;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // Servicios - EL ORDEN IMPORTA
 builder.Services.AddRazorPages();  // ← Esto PRIMERO
-var mvcBuilder = builder.Services.AddControllersWithViews();
+var mvcBuilder = builder.Services.AddControllersWithViews(options =>
+{
+    var policy = new AuthorizationPolicyBuilder()
+        .RequireAuthenticatedUser()
+        .Build();
+    options.Filters.Add(new AuthorizeFilter(policy));
+});
 // Enable runtime view recompilation only in Development
 if (builder.Environment.IsDevelopment())
 {
@@ -29,6 +38,18 @@ builder.Services.AddHttpClient("Api", c =>
     c.Timeout = TimeSpan.FromSeconds(8);
 });
 
+// Cookie authentication
+builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
+    .AddCookie(options =>
+    {
+        options.LoginPath = "/Account/Login";
+        options.AccessDeniedPath = "/Account/Login";
+        options.Cookie.Name = ".SnackGol.Auth";
+        options.ExpireTimeSpan = TimeSpan.FromHours(8);
+    });
+
+builder.Services.AddAuthorization();
+
 var app = builder.Build();
 
 if (!app.Environment.IsDevelopment())
@@ -43,6 +64,7 @@ app.UseStaticFiles();
 
 app.UseRouting();
 app.UseSession();
+app.UseAuthentication();
 app.UseAuthorization();
 
 // Mapeo de endpoints - EL ORDEN IMPORTA
@@ -50,6 +72,6 @@ app.MapRazorPages();  // ← Esto DEBE ir ANTES de MapControllerRoute
 
 app.MapControllerRoute(
     name: "default",
-    pattern: "{controller=Home}/{action=Index}/{id?}");
+    pattern: "{controller=Account}/{action=Login}/{id?}");
 
 app.Run();

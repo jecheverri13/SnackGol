@@ -1,0 +1,60 @@
+@model MSSnackGolFrontend.Models.LoginViewModel
+@{
+    ViewData["Title"] = "Iniciar sesión";
+}
+
+<style>
+    .login-card {
+        max-width: 720px;
+        margin: 48px auto;
+        background: #0f1220;
+        color: #e7e7ea;
+        padding: 36px;
+        border-radius: 16px;
+        box-shadow: 0 6px 24px rgba(4,6,12,0.6);
+    }
+    .login-card .form-control {
+        background: rgba(255,255,255,0.02);
+        border: 1px solid rgba(255,255,255,0.04);
+        color: #ddd;
+    }
+    .login-card label { color: #d6d6da; }
+    .btn-orange { background: #ea5b21; border: none; color: white; }
+    .validation-summary-errors { color: #ffb3b3; }
+</style>
+
+<div class="login-card">
+    <h2 class="mb-4">Escríbenos</h2>
+
+    <!-- Temporary: post directly to LoginDebug to confirm server receives form -->
+    <form action="/Account/Login" method="post" novalidate>
+        <div asp-validation-summary="ModelOnly" class="validation-summary-errors"></div>
+        <input type="hidden" asp-for="ReturnUrl" />
+
+        <div class="mb-3">
+            <label asp-for="Email" class="form-label">Correo electrónico</label>
+            <input asp-for="Email" type="email" class="form-control" placeholder="nombre@empresa.com" />
+            <span asp-validation-for="Email" class="text-danger"></span>
+        </div>
+
+        <div class="mb-3">
+            <label asp-for="Password" class="form-label">Contraseña</label>
+            <input asp-for="Password" type="password" class="form-control" placeholder="Contraseña" />
+            <span asp-validation-for="Password" class="text-danger"></span>
+        </div>
+
+        @if (!string.IsNullOrEmpty(Model.ErrorMessage))
+        {
+            <div class="alert alert-danger">@Model.ErrorMessage</div>
+        }
+
+        <div class="d-grid mt-3">
+            <input type="submit" value="Iniciar Sesión" class="btn btn-orange btn-lg" />
+        </div>
+    </form>
+
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

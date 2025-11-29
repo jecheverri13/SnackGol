@@ -616,3 +616,4 @@ $RECYCLE.BIN/
 
 ### VisualStudio Patch ###
 # Additional files built by Visual Studio
+/MSSnackGol/appsettings.Development.json
