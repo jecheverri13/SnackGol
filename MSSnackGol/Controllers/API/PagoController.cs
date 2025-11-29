@@ -41,7 +41,7 @@ namespace MSSnackGol.Controllers.API
 
                     if (!_paymentValidationService.ValidateNequi(request.NumeroCuentaNequi))
                     {
-                        return BadRequest(new { error = "Número de Nequi inválido. Debe ser 10 dígitos comenzando con 3." });
+                        return BadRequest(new { error = "Número de Nequi inválido." });
                     }
 
                     _logger.LogInformation($"Pago Nequi procesado: {request.NumeroCuentaNequi} - Total: {request.Total}");
@@ -58,7 +58,7 @@ namespace MSSnackGol.Controllers.API
                     
                     if (!_paymentValidationService.ValidateCreditCardLuhn(cardNumberClean))
                     {
-                        return BadRequest(new { error = "Número de tarjeta de crédito inválido (validación Luhn fallida)." });
+                        return BadRequest(new { error = "Número de tarjeta de crédito inválido." });
                     }
 
                     _logger.LogInformation($"Pago Tarjeta procesado: {cardNumberClean.Substring(cardNumberClean.Length - 4).PadLeft(cardNumberClean.Length, '*')} - Total: {request.Total}");
