@@ -144,7 +144,7 @@
             if (metodoPago === 'tarjeta') {
                 const cardNumber = numeroTarjeta.replace(/\s+/g, '');
                 if (!isValidCreditCard(cardNumber)) {
-                    alert('Número de tarjeta de crédito inválido (validación Luhn).');
+                    alert('Número de tarjeta de crédito inválido.');
                     return;
                 }
             }
