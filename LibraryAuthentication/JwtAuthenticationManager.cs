@@ -18,7 +18,7 @@ namespace LibraryAuthentication
         /// </summary>
         /// <param name="authenticationRequest">Autenticación (Company, Username, password)</param>
         /// <returns>Token Generado</returns>
-        public static Auth GenerateJwtToken(LoginRequest login)
+        public Response<Auth> GenerateJwtToken(LoginRequest login)
         {
             try
             {
@@ -46,19 +46,22 @@ namespace LibraryAuthentication
                 var token = jwtSecurityTokenHandler.WriteToken(securityToken);
 
 
-                return new Auth
+                return new Response<Auth>
                 {
-                    token = token,
-                    expiresIn = (int)tokenExpiryTimeStamp.Subtract(DateTime.Now).TotalSeconds
+                    status = System.Net.HttpStatusCode.OK,
+                    response = new Auth
+                    {
+                        token = token,
+                        expiresIn = (int)tokenExpiryTimeStamp.Subtract(DateTime.Now).TotalSeconds
+                    }
                 };
             }
             catch (Exception)
             {
-                return new Auth
+                return new Response<Auth>
                 {
-                    expiresIn = 0,
-                    token = string.Empty
-
+                    status = System.Net.HttpStatusCode.InternalServerError,
+                    response = null
                 };
             }
         }
