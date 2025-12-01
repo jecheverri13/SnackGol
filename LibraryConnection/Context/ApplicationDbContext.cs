@@ -2,6 +2,7 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.EntityFrameworkCore.Storage;
+using System.ComponentModel.DataAnnotations;
 
 namespace LibraryConnection.Context
 {
@@ -190,5 +191,28 @@ namespace LibraryConnection.Context
             new Product { id = 9, category_id = 3, name = "Cupcakes surtidos", description = "Bandeja de cupcakes", price = 1800, stock = 40, image_url = "https://plus.unsplash.com/premium_photo-1681506436855-db38ac7cf9e6?ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1yZWxhdGVkfDR8fHxlbnwwfHx8fHw%3D&auto=format&fit=crop&q=80&w=800", is_active = true }
         );
         }
+    }
+
+    public class ProductCreateRequest
+    {
+        [Required]
+        public int category_id { get; set; }
+
+        [Required, StringLength(150)]
+        public string name { get; set; } = string.Empty;
+
+        [StringLength(1000)]
+        public string? description { get; set; }
+
+        [Range(0, double.MaxValue)]
+        public double price { get; set; }
+
+        [Range(0, int.MaxValue)]
+        public int stock { get; set; }
+
+        [Url]
+        public string? image_url { get; set; }
+
+        public bool is_active { get; set; } = true;
     }
 }
