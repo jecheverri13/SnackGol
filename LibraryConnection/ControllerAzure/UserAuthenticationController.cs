@@ -3,6 +3,7 @@ using LibraryConnection.DbSet;
 using LibraryEncrypt.Encryption;
 using LibraryEntities;
 using LibraryEntities.Models;
+using Microsoft.EntityFrameworkCore;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -23,7 +24,7 @@ namespace LibraryConnection.ControllerAzure
                 {
                     var user = contexto.users
                         .FirstOrDefault(u => u.email == login.UserNname);
-                    if (user != null) 
+                    if (user != null)
                     {
                         return EncryptCSS.Encrypt(login.Password) == user.password;
                     };
@@ -33,6 +34,32 @@ namespace LibraryConnection.ControllerAzure
             catch (Exception)
             {
                 return false;
+            }
+        }
+
+        // Devuelve el usuario (incluyendo Role) por email si existe y la contraseña coincide, o null
+        public User GetUserIfValid(LoginRequest login)
+        {
+            try
+            {
+                using (var contexto = new ApplicationDbContext())
+                {
+                    var user = contexto.users
+                        .Include(u => u.Role)
+                        .FirstOrDefault(u => u.email == login.UserNname);
+
+                    if (user == null)
+                        return null;
+
+                    if (EncryptCSS.Encrypt(login.Password) != user.password)
+                        return null;
+
+                    return user;
+                }
+            }
+            catch (Exception)
+            {
+                return null;
             }
         }
     }

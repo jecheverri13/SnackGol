@@ -23,15 +23,16 @@ namespace MSSnackGol.Controllers
         {
             try
             {
-                //Primero verificar que exista el usuario en la base de datos
+                // Primero verificar que exista el usuario y obtener su rol
                 UserAuthenticationController userAuthController = new UserAuthenticationController();
-                bool isValidUser = userAuthController.VerifyUserAndPassword(oLogin);
-                if (!isValidUser)
+                var user = userAuthController.GetUserIfValid(oLogin);
+                if (user == null)
                 {
                     return StatusCode(401, new Response<dynamic>(false, HttpStatusCode.Unauthorized, "Invalid username or password"));
                 }
 
-                var authenticationResponse = _jwtTokenHandler.GenerateJwtToken(oLogin);
+                var roleName = user.Role?.name ?? string.Empty;
+                var authenticationResponse = _jwtTokenHandler.GenerateJwtToken(oLogin, user.id, roleName);
                 if (authenticationResponse == null)
                 {
                     return StatusCode(401, new Response<dynamic>(false, HttpStatusCode.Unauthorized, Unauthorized()));

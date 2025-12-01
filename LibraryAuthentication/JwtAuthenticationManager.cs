@@ -18,16 +18,35 @@ namespace LibraryAuthentication
         /// </summary>
         /// <param name="authenticationRequest">Autenticación (Company, Username, password)</param>
         /// <returns>Token Generado</returns>
-        public Response<Auth> GenerateJwtToken(LoginRequest login)
+        public Response<Auth> GenerateJwtToken(LoginRequest login, long userId, string roleName)
         {
             try
             {
                 var tokenExpiryTimeStamp = DateTime.Now.AddMinutes(JWT_TOKEN_VALIDITY_MINS);
                 var tokenKey = Encoding.ASCII.GetBytes(JWT_SECURITY_KEY);
-                var claimsIdentity = new ClaimsIdentity(new List<Claim>
+                // Build claims: include user id as Name, username and role(s)
+                var claims = new List<Claim>
                 {
-                    new Claim("UserName", login.UserNname),
-                });
+                    new Claim(ClaimTypes.Name, userId.ToString()),
+                    new Claim(ClaimTypes.NameIdentifier, userId.ToString()),
+                    new Claim("UserName", login.UserNname ?? string.Empty)
+                };
+
+                if (!string.IsNullOrWhiteSpace(roleName))
+                {
+                    var normalizedRole = roleName;
+                    // Normalize common admin role names to "Admin" for attribute checks
+                    if (roleName.IndexOf("admin", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                        roleName.IndexOf("administrador", StringComparison.OrdinalIgnoreCase) >= 0)
+                    {
+                        normalizedRole = "Admin";
+                    }
+
+                    claims.Add(new Claim(ClaimTypes.Role, normalizedRole));
+                    claims.Add(new Claim("role", normalizedRole));
+                }
+
+                var claimsIdentity = new ClaimsIdentity(claims);
                     
                 var signingCredentials = new SigningCredentials(
                     new SymmetricSecurityKey(tokenKey),

@@ -4,6 +4,7 @@ using LibraryConnection.Dtos;
 using LibraryConnection.DbSet;
 using LibraryEntities.Models;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Authorization;
 using System.Net;
 using Microsoft.EntityFrameworkCore;
 using System.Globalization;
@@ -117,6 +118,7 @@ namespace MSSnackGol.Controllers
         /// Elimina todos los pedidos (solo para desarrollo/testing).
         /// </summary>
         [HttpDelete("All")]
+        [Authorize(Roles = "Admin")]
         public IActionResult DeleteAllOrders()
         {
             try
@@ -214,6 +216,7 @@ namespace MSSnackGol.Controllers
         /// Este endpoint es para uso del staff/administrador.
         /// </summary>
         [HttpPatch("{orderId}/status")]
+        [Authorize(Roles = "Admin")]
         public IActionResult UpdateOrderStatus(string orderId, [FromBody] UpdateStatusRequest request)
         {
             if (request == null || string.IsNullOrWhiteSpace(request.NewStatus))
@@ -290,6 +293,7 @@ namespace MSSnackGol.Controllers
         /// Obtiene todos los pedidos activos (no entregados) para el panel de administración.
         /// </summary>
         [HttpGet("Active")]
+        [Authorize(Roles = "Admin")]
         public IActionResult GetActiveOrders()
         {
             try
@@ -598,6 +602,7 @@ namespace MSSnackGol.Controllers
         /// Resetea el stock de todos los productos a 100 unidades (para desarrollo/testing)
         /// </summary>
         [HttpPost("ResetStock")]
+        [Authorize(Roles = "Admin")]
         public IActionResult ResetStock()
         {
             try
