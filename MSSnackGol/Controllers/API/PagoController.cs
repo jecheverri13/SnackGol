@@ -15,12 +15,29 @@ namespace MSSnackGol.Controllers.API
             _paymentValidationService = paymentValidationService;
             _logger = logger;
         }
-
-        /// <summary>
-        /// Procesa un pago validando el método de pago
-        /// </summary>
-        /// <param name="request">Datos del pago a procesar</param>
-        /// <returns>Resultado de la transacción</returns>
+        /*
+          <summary>
+          Procesa un pago validando el método de pago seleccionado.
+          
+          Flujo:
+          1. Valida que los datos del formulario sean correctos
+          2. Si es Nequi: valida que tenga 10 dígitos y empiece con 3
+          3. Si es Tarjeta: valida el algoritmo de Luhn
+          4. Genera un código de confirmación único
+          5. Retorna el código junto con los detalles de la transacción
+          
+          Ejemplo de respuesta exitosa:
+          {
+            "success": true,
+            "codigoConfirmacion": "PAGO-20251201120000-5432",
+            "fecha": "2025-12-01T12:00:00",
+            "monto": 10948.0,
+            "metodoPago": "nequi"
+          }
+          </summary>
+          <param name="request">Datos del pago a procesar (metodoPago, numeroCuentaNequi/numeroTarjeta, total)</param>
+          <returns>Código de confirmación si es exitoso, o BadRequest con error específico</returns>
+        */
         [HttpPost("procesar")]
         public IActionResult ProcesarPago([FromBody] ProcesarPagoRequest request)
         {
@@ -31,7 +48,6 @@ namespace MSSnackGol.Controllers.API
 
             try
             {
-                // Validar según el método de pago
                 if (request.MetodoPago == "nequi")
                 {
                     if (string.IsNullOrWhiteSpace(request.NumeroCuentaNequi))
@@ -53,7 +69,6 @@ namespace MSSnackGol.Controllers.API
                         return BadRequest(new { error = "Número de tarjeta requerido." });
                     }
 
-                    // Limpiar espacios y validar
                     string cardNumberClean = request.NumeroTarjeta.Replace(" ", "").Replace("-", "");
                     
                     if (!_paymentValidationService.ValidateCreditCardLuhn(cardNumberClean))
@@ -68,11 +83,7 @@ namespace MSSnackGol.Controllers.API
                     return BadRequest(new { error = "Método de pago no válido." });
                 }
 
-                // Generar código de confirmación
                 string codigoConfirmacion = GenerarCodigoConfirmacion();
-
-                // Aquí iría la lógica para guardar la transacción en BD
-                // Por ahora, retornamos el código de confirmación
 
                 return Ok(new
                 {
@@ -89,19 +100,30 @@ namespace MSSnackGol.Controllers.API
                 return StatusCode(500, new { error = "Error al procesar el pago. Intente más tarde." });
             }
         }
-
-        /// <summary>
-        /// Genera un código de confirmación único
-        /// </summary>
+        /*
+          <summary>
+          Genera un código de confirmación único con formato: PAGO-yyyyMMddHHmmss-xxxx
+          
+          Ejemplo:
+          GenerarCodigoConfirmacion() → "PAGO-20251201120000-5432"
+          
+          Componentes:
+          - Prefijo: "PAGO-"
+          - Timestamp: Formato yyyyMMddHHmmss (año, mes, día, hora, minuto, segundo)
+          - Sufijo: Número aleatorio entre 1000-9999
+          </summary>
+          <returns>Código de confirmación formateado</returns>
+          */
         private string GenerarCodigoConfirmacion()
         {
             return $"PAGO-{DateTime.Now:yyyyMMddHHmmss}-{Random.Shared.Next(1000, 9999)}";
         }
     }
-
-    /// <summary>
-    /// Modelo para solicitud de procesamiento de pago
-    /// </summary>
+    /*
+      <summary>
+      Modelo para solicitud de procesamiento de pago
+      </summary>
+      */
     public class ProcesarPagoRequest
     {
         public string MetodoPago { get; set; } = string.Empty;

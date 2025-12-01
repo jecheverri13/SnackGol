@@ -17,11 +17,12 @@ namespace MSSnackGolFrontend.Controllers
             _logger = logger;
         }
 
-        /// <summary>
-        /// Muestra la página de confirmación de pago
-        /// </summary>
-        /// <param name="subtotal">Subtotal a pagar</param>
-        /// <returns>Vista de confirmación de pago</returns>
+        /*
+        <summary>
+        Muestra la página de confirmación de pago
+        </summary>
+        <param name="subtotal">Subtotal a pagar</param>
+        <returns>Vista de confirmación de pago</returns> */
         public IActionResult ConfirmarPago(decimal subtotal = 0)
         {
             var modelo = new PagoViewModel
@@ -32,12 +33,31 @@ namespace MSSnackGolFrontend.Controllers
 
             return View(modelo);
         }
-
-        /// <summary>
-        /// Procesa el pago enviado desde el formulario
-        /// </summary>
-        /// <param name="modelo">Datos del pago</param>
-        /// <returns>Redirige a confirmación o vuelve al formulario con errores</returns>
+        /*
+          <summary>
+          Procesa el pago enviado desde el formulario.
+          
+          Flujo:
+          1. Valida los datos del formulario (método de pago, número de cuenta/tarjeta)
+          2. Envía los datos al backend para validar el pago (/api/pago/procesar)
+          3. Obtiene el código de confirmación de la respuesta
+          4. Crea un cliente en la BD si no existe
+          5. Registra la orden en el backend
+          6. Genera un payload Base64 para el QR
+          7. Redirige a la vista de confirmación con QR
+          
+          Ejemplo de uso:
+          POST /Pago/ProcesarPago
+          {
+            "metodoPago": "nequi",
+            "numeroCuentaNequi": "3001234567",
+            "subtotal": 9200,
+            "total": 10948
+          }
+          Respuesta: Redirige a QR/Confirmacion con código PAGO-20251201120000-xxxx
+          </summary>
+          <param name="modelo">Datos del pago incluyendo método, monto y número de cuenta/tarjeta</param>
+          <returns>Redirige a QR/Confirmacion si es exitoso, o regresa al formulario si hay error</returns> */
         [HttpPost]
         public async Task<IActionResult> ProcesarPago(PagoViewModel modelo)
         {
@@ -49,9 +69,8 @@ namespace MSSnackGolFrontend.Controllers
 
             try
             {
-                // Llamar a API backend para validar y procesar el pago
                 var client = _httpClientFactory.CreateClient();
-                var apiUrl = "http://localhost:5046/api/pago/procesar"; // Puerto correcto del backend
+                var apiUrl = "http://localhost:5046/api/pago/procesar";
 
                 var content = new StringContent(
                     JsonSerializer.Serialize(new
@@ -78,7 +97,6 @@ namespace MSSnackGolFrontend.Controllers
                         var jsonDoc = JsonDocument.Parse(responseContent);
                         var root = jsonDoc.RootElement;
 
-                        // Extraer el código de confirmación
                         string codigoConfirmacion = "PAGO-SIN-CODIGO";
                         if (root.TryGetProperty("codigoConfirmacion", out var codElement))
                         {
@@ -89,16 +107,12 @@ namespace MSSnackGolFrontend.Controllers
                             codigoConfirmacion = codElement2.GetString() ?? "PAGO-SIN-CODIGO";
                         }
 
-                        // Obtener el token de sesión del carrito
                         var sessionToken = HttpContext.Session.GetString("SessionToken") ?? "guest-" + Guid.NewGuid().ToString().Substring(0, 8);
 
-                        // Crear la orden en el backend usando OrderManagement/Create
                         await CreateOrderInBackend(client, sessionToken, modelo.Total, codigoConfirmacion);
 
-                        // IMPORTANTE: Limpiar la sesión ANTES de crear el nuevo CheckoutConfirmationPayload
                         HttpContext.Session.Remove("CheckoutConfirmationPayload");
 
-                        // Crear modelo para la vista QR
                         var confirmacionViewModel = new CheckoutConfirmationViewModel
                         {
                             OrderId = codigoConfirmacion,
@@ -108,18 +122,15 @@ namespace MSSnackGolFrontend.Controllers
                             {
                                 Code = codigoConfirmacion,
                                 GeneratedAtUtc = DateTime.UtcNow,
-                                // Generar un payload JSON simple que la vista puede convertir a QR
                                 PayloadBase64 = GeneratePayloadBase64(codigoConfirmacion, (double)modelo.Total),
-                                QrImageBase64 = null  // Se generará en la vista desde el payload
+                                QrImageBase64 = null
                             }
                         };
 
-                        // Guardar en sesión con la clave esperada por QRController
                         HttpContext.Session.SetString("CheckoutConfirmationPayload", JsonSerializer.Serialize(confirmacionViewModel));
                         TempData["SuccessMessage"] = "Pago procesado exitosamente.";
                         TempData["CodigoConfirmacion"] = codigoConfirmacion;
 
-                        // Redirigir a la vista QR
                         return RedirectToAction("Confirmacion", "QR");
                     }
                     catch (JsonException ex)
@@ -150,15 +161,28 @@ namespace MSSnackGolFrontend.Controllers
                 return RedirectToAction("ConfirmarPago", new { subtotal = modelo.Subtotal });
             }
         }
-
-        /// <summary>
-        /// Crea una orden en el backend después de procesar el pago
-        /// </summary>
+        /*
+          <summary>
+          Crea una orden en el backend después de procesar el pago.
+          
+          Pasos:
+          1. Verifica/crea el cliente con el sessionToken
+          2. Construye la solicitud de orden con los detalles del pago
+          3. POST a /api/OrderManagement/Create
+          4. Registra el resultado en los logs
+          
+          Ejemplo:
+          CreateOrderInBackend(client, "guest-abc123", 10948m, "PAGO-20251201120000-xxxx")
+          Crea una orden con customer_id="guest-abc123", total=10948, voucher_number=código de confirmación
+          </summary>
+          <param name="client">Cliente HTTP configurado</param>
+          <param name="sessionToken">Token de sesión o ID del cliente</param>
+          <param name="total">Monto total del pedido</param>
+          <param name="codigoConfirmacion">Código de confirmación del pago</param>*/
         private async Task CreateOrderInBackend(HttpClient client, string sessionToken, decimal total, string codigoConfirmacion)
         {
             try
             {
-                // Primero, asegurar que el cliente existe en la BD
                 await EnsureClientExists(client, sessionToken);
 
                 var orderRequest = new OrderRequest
@@ -175,7 +199,7 @@ namespace MSSnackGolFrontend.Controllers
                         new OrderLineRequest
                         {
                             item = "PAGO",
-                            description = "1.0", // Debe ser un número válido (>= 0.01)
+                            description = "1.0",
                             grossAmount = (double)total,
                             netPrice = (double)total,
                             taxAmount = 0,
@@ -205,18 +229,30 @@ namespace MSSnackGolFrontend.Controllers
             catch (Exception ex)
             {
                 _logger.LogError($"Error al registrar la orden en el backend: {ex.Message}");
-                // No lanzar excepción - el pago ya se procesó, registrar en logs
             }
         }
-
-        /// <summary>
-        /// Asegura que el cliente existe en la BD, lo crea si es necesario
-        /// </summary>
+        /*
+          <summary>
+          Asegura que el cliente existe en la base de datos.
+          Si el cliente no existe, lo crea automáticamente.
+          
+          Comportamiento:
+          - Construye un objeto ClientRequest con sessionToken como document
+          - POST a /api/ClientManagement/Create
+          - Si el cliente ya existe, el endpoint lo maneja gracefully
+          - Si falla, registra en logs pero no interrumpe el flujo
+          
+          Ejemplo:
+          EnsureClientExists(client, "guest-abc123")
+          Crea/verifica cliente con document="guest-abc123", name="Cliente Invitado SnackGol"
+          </summary>
+          <param name="client">Cliente HTTP configurado</param>
+          <param name="sessionToken">Token de sesión que será usado como document del cliente</param>
+        */
         private async Task EnsureClientExists(HttpClient client, string sessionToken)
         {
             try
             {
-                // Intentar crear el cliente (si ya existe, el endpoint maneja gracefully)
                 var clientRequest = new
                 {
                     document = sessionToken,
@@ -246,13 +282,31 @@ namespace MSSnackGolFrontend.Controllers
             catch (Exception ex)
             {
                 _logger.LogError($"Error al crear/verificar cliente en el backend: {ex.Message}");
-                // No lanzar excepción - continuar con el flujo
             }
         }
-
-        /// <summary>
-        /// Genera un payload JSON codificado en Base64 para el QR
-        /// </summary>
+        /*
+          <summary>
+          Genera un payload JSON codificado en Base64 para la generación del QR.
+          
+          Estructura del payload:
+          {
+            "OrderId": "PAGO-20251201120000-xxxx",
+            "PickupCode": "PAGO-20251201120000-xxxx",
+            "Amount": 10948.0,
+            "Currency": "COP",
+            "GeneratedAt": "2025-12-01T12:00:00.0000000Z",
+            "Type": "SnackGolPickup"
+          }
+          
+          Ejemplo:
+          var payload = GeneratePayloadBase64("PAGO-20251201120000-1234", 10948.0)
+          Retorna: "eyJPcmRlcklkIjoiUEFHTy0yMDI1MTIwMTEyMDAwMC0xMjM0IiwgIlBpY2t1cENvZGUiOi4uLiJ9"
+          Este payload se decodifica y transforma en QR en la vista
+          </summary>
+          <param name="codigoConfirmacion">Código de confirmación del pago</param>
+          <param name="total">Monto total a pagar</param>
+          <returns>Payload JSON codificado en Base64, o string vacío si hay error</returns>
+        */
         private string GeneratePayloadBase64(string codigoConfirmacion, double total)
         {
             try
@@ -277,20 +331,22 @@ namespace MSSnackGolFrontend.Controllers
                 return string.Empty;
             }
         }
-
-        /// <summary>
-        /// Muestra página de pago exitoso (legacy - se usa QR/Confirmacion en su lugar)
-        /// </summary>
+        /*
+          <summary>
+          Muestra página de pago exitoso (legacy - se usa QR/Confirmacion en su lugar)
+          </summary>
+          */
         public IActionResult PagoExitoso()
         {
             var codigoConfirmacion = TempData["CodigoConfirmacion"]?.ToString() ?? "N/A";
             ViewBag.CodigoConfirmacion = codigoConfirmacion;
             return View();
         }
-
-        /// <summary>
-        /// Muestra página de error en pago
-        /// </summary>
+        /*
+          <summary>
+          Muestra página de error en pago
+          </summary>
+          */
         public IActionResult PagoFallido()
         {
             return View();
