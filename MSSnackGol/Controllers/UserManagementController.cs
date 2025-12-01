@@ -1,14 +1,13 @@
-﻿using LibraryConnection.Context;
-using LibraryConnection.ControllerAzure;
+﻿using LibraryConnection.ControllerAzure;
 using LibraryEntities.Models;
 using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using System.Net;
 
 namespace MSSnackGol.Controllers
 {
     [Route("api/[controller]")]
+    [Authorize]
     public class UserManagementController : ControllerBase
     {
         [HttpPost("Create")]

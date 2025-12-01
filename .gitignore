@@ -399,6 +399,9 @@ FodyWeavers.xsd
 # JetBrains Rider
 *.sln.iml
 
+# Ignore repo-specific AI instructions
+/.github/copilot-instructions.md
+
 ### VisualStudioCode ###
 !.vscode/*.code-snippets
 
@@ -613,3 +616,4 @@ $RECYCLE.BIN/
 
 ### VisualStudio Patch ###
 # Additional files built by Visual Studio
+/MSSnackGol/appsettings.Development.json

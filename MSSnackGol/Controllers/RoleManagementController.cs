@@ -13,6 +13,7 @@ namespace MSSnackGol.Controllers
     public class RoleManagementController : ControllerBase
     {
         [HttpPost("Create")]
+        [Authorize(Roles = "Admin")]
         public IActionResult RoleCreation([FromBody] RoleRequest roleData)
         {
             try

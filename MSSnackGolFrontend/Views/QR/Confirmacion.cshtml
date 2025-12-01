@@ -5,80 +5,264 @@
     var qrImage = Model.Pickup?.QrImageBase64;
     var qrPayload = Model.Pickup?.PayloadBase64;
     var pickupCode = string.IsNullOrWhiteSpace(Model.Pickup?.Code) ? "Pendiente" : Model.Pickup?.Code;
-    var status = string.IsNullOrWhiteSpace(Model.Status) ? "Confirmado" : Model.Status;
+    var isReadyForPickup = string.Equals(Model.Status, "ReadyForPickup", System.StringComparison.OrdinalIgnoreCase);
+    var isDelivered = string.Equals(Model.Status, "Delivered", System.StringComparison.OrdinalIgnoreCase);
+    var isPreparing = string.Equals(Model.Status, "Preparing", System.StringComparison.OrdinalIgnoreCase);
+    var statusDisplay = isDelivered ? "Entregado" : (isReadyForPickup ? "Listo para recoger" : (isPreparing ? "En preparación" : "Confirmado"));
+    var statusClass = isDelivered ? "status-delivered" : (isReadyForPickup ? "status-ready" : (isPreparing ? "status-preparing" : "status-confirmed"));
     var flash = ViewBag.CheckoutFlash as string;
 }
+
+<!-- Overlay de Pantalla Completa para QR -->
+<div id="qr-fullscreen-overlay" class="qr-fullscreen-overlay" style="display: none;">
+    <div class="fullscreen-content">
+        <div class="fullscreen-header">
+            <img src="~/images/logo_snackgol.svg" alt="SnackGol" class="fullscreen-logo" />
+            <button type="button" class="btn-close-fullscreen" data-close-fullscreen aria-label="Cerrar pantalla completa">
+                <i class="bi bi-x-lg"></i>
+            </button>
+        </div>
+        <div class="fullscreen-qr-container">
+            <div class="qr-scan-ring @statusClass">
+                <div class="scan-animation"></div>
+                @if (!string.IsNullOrWhiteSpace(qrImage))
+                {
+                    <img src="data:image/png;base64,@qrImage" alt="Código QR del pedido" class="fullscreen-qr-image" />
+                }
+                else
+                {
+                    <div id="fullscreen-generated-qr" class="fullscreen-qr-image d-flex justify-content-center align-items-center">
+                        <span class="text-muted">Cargando...</span>
+                    </div>
+                }
+            </div>
+        </div>
+        <div class="fullscreen-info">
+            <div class="pickup-code-display">
+                <span class="label">Código de recogida</span>
+                <span class="code" data-pickup-code-fullscreen>@pickupCode</span>
+            </div>
+            <p class="scan-instruction">
+                <i class="bi bi-lightbulb"></i>
+                Mantén el brillo al máximo y el teléfono perpendicular al escáner
+            </p>
+        </div>
+    </div>
+</div>
 
 <div class="container py-4 py-lg-5">
     <div class="row justify-content-center">
         <div class="col-12 col-lg-10 col-xl-8">
-            <div class="card shadow-sm border-0 confirmation-card">
+            <div class="card shadow-lg border-0 confirmation-card overflow-hidden @statusClass">
+                <div class="confirmation-hero p-4 p-lg-5 text-white">
+                    <div class="d-flex flex-column flex-md-row align-items-center gap-4">
+                        <img src="~/images/logo_snackgol.svg" alt="Logo SnackGol" class="hero-logo" />
+                        <div class="text-center text-md-start">
+                            <span class="status-badge mb-2 d-inline-flex align-items-center gap-2">
+                                @if (isDelivered)
+                                {
+                                    <i class="bi bi-bag-check-fill"></i>
+                                    <span>Pedido entregado</span>
+                                }
+                                else if (isReadyForPickup)
+                                {
+                                    <i class="bi bi-bell-fill pulse-icon"></i>
+                                    <span>¡Listo para recoger!</span>
+                                }
+                                else
+                                {
+                                    <i class="bi bi-check-circle-fill"></i>
+                                    <span>Pedido confirmado</span>
+                                }
+                            </span>
+                            <h1 class="display-6 fw-semibold mb-2">
+                                @if (isDelivered)
+                                {
+                                    <text>¡Gracias por tu compra!</text>
+                                }
+                                else if (isReadyForPickup)
+                                {
+                                    <text>¡Tu pedido está listo!</text>
+                                }
+                                else
+                                {
+                                    <text>¡Estamos preparando tu SnackGol!</text>
+                                }
+                            </h1>
+                            <p class="hero-subtitle mb-0">
+                                @if (isDelivered)
+                                {
+                                    <text>Tu pedido fue entregado exitosamente. ¡Esperamos verte pronto!</text>
+                                }
+                                else
+                                {
+                                    <text>Dirígete al módulo de entrega y presenta este código cuando el personal te lo solicite.</text>
+                                }
+                            </p>
+                        </div>
+                    </div>
+                    <div class="hero-stats d-flex flex-wrap gap-3 mt-4">
+                        <div class="stat-chip">
+                            <span class="label">Orden</span>
+                            <span class="value">@(!string.IsNullOrWhiteSpace(Model.OrderId) ? Model.OrderId : "Pendiente")</span>
+                        </div>
+                        <div class="stat-chip">
+                            <span class="label">Código de recogida</span>
+                            <div class="d-flex align-items-center gap-2">
+                                <span class="value" data-pickup-code>@pickupCode</span>
+                                @if (!string.Equals(pickupCode, "Pendiente", System.StringComparison.OrdinalIgnoreCase))
+                                {
+                                    <button type="button" class="btn btn-sm btn-light copy-btn" data-copy-code data-copy-value="@pickupCode" aria-label="Copiar código de recogida">
+                                        <i class="bi bi-clipboard"></i>
+                                    </button>
+                                }
+                            </div>
+                        </div>
+                        <div class="stat-chip status-indicator">
+                            <span class="label">Estado</span>
+                            <span class="value d-flex align-items-center gap-2">
+                                <span class="status-dot @statusClass"></span>
+                                @statusDisplay
+                            </span>
+                        </div>
+                        <div class="stat-chip">
+                            <span class="label">Total</span>
+                            <span class="value">@Model.Total.ToString("C0", new System.Globalization.CultureInfo("es-CO"))</span>
+                        </div>
+                    </div>
+                </div>
                 <div class="card-body p-4 p-lg-5">
-                    <div class="d-flex flex-column flex-md-row align-items-center align-items-md-start gap-4">
-                        <div class="flex-fill text-center text-md-start">
-                            <span class="pill mb-2 d-inline-flex align-items-center gap-2 text-success"><i class="bi bi-check-circle-fill"></i> Pedido confirmado</span>
-                            <h1 class="h3 h-md-2 fw-semibold mb-3">Tu orden está en preparación</h1>
-                            <p class="text-muted mb-3">Presenta este código QR al personal de SnackGol cuando te acerques a recoger tu pedido. Ellos escanearán el código para validar la entrega.</p>
-                            <div class="d-flex flex-wrap gap-3 text-start">
-                                <div class="order-detail">
-                                    <span class="label">Orden</span>
-                                    <span class="value">@(!string.IsNullOrWhiteSpace(Model.OrderId) ? Model.OrderId : "Pendiente")</span>
+                    <div class="row g-4 align-items-start">
+                        <div class="col-lg-5">
+                            <div class="qr-panel text-center h-100 @statusClass">
+                                <div class="qr-container @(isDelivered ? "qr-delivered" : "")">
+                                    @if (!isDelivered)
+                                    {
+                                        <div class="qr-pulse-ring"></div>
+                                    }
+                                    @if (!string.IsNullOrWhiteSpace(qrImage))
+                                    {
+                                        <img src="data:image/png;base64,@qrImage" alt="Código QR del pedido" class="qr-image shadow-sm" loading="lazy" decoding="async" data-qr-image />
+                                    }
+                                    else
+                                    {
+                                        <div id="generated-qr" class="qr-image shadow-sm d-flex justify-content-center align-items-center">
+                                            <span class="text-muted small">Generando QR…</span>
+                                        </div>
+                                    }
+                                    @if (isDelivered)
+                                    {
+                                        <div class="qr-delivered-overlay">
+                                            <i class="bi bi-check-circle-fill"></i>
+                                            <span>Entregado</span>
+                                        </div>
+                                    }
                                 </div>
-                                <div class="order-detail">
-                                    <span class="label">Código de recogida</span>
-                                    <span class="value" data-pickup-code>@pickupCode</span>
-                                </div>
-                                <div class="order-detail">
-                                    <span class="label">Estado</span>
-                                    <span class="value">@status</span>
-                                </div>
-                                <div class="order-detail">
-                                    <span class="label">Total</span>
-                                    <span class="value">@Model.Total.ToString("C0", new System.Globalization.CultureInfo("es-CO"))</span>
-                                </div>
+                                
+                                @if (!isDelivered)
+                                {
+                                    <div class="qr-actions mt-3">
+                                        <button type="button" class="btn btn-primary btn-fullscreen w-100 mb-2" data-open-fullscreen>
+                                            <i class="bi bi-fullscreen me-2"></i>Pantalla completa
+                                        </button>
+                                        <div class="btn-group w-100" role="group">
+                                            <button type="button" class="btn btn-outline-secondary" data-download-qr @(string.IsNullOrWhiteSpace(qrImage) ? "disabled" : null)>
+                                                <i class="bi bi-download me-1"></i>Descargar
+                                            </button>
+                                            <button type="button" class="btn btn-outline-secondary" data-share-qr>
+                                                <i class="bi bi-share me-1"></i>Compartir
+                                            </button>
+                                        </div>
+                                        <button type="button" class="btn btn-outline-secondary w-100 mt-2 d-none d-lg-flex justify-content-center" onclick="window.print()">
+                                            <i class="bi bi-printer me-1"></i>Imprimir
+                                        </button>
+                                    </div>
+                                    <p class="qr-tip mt-3 mb-0">
+                                        <i class="bi bi-lightbulb text-warning"></i>
+                                        <span>Sube el brillo de tu pantalla para facilitar el escaneo.</span>
+                                    </p>
+                                }
+                                else
+                                {
+                                    <div class="delivered-message mt-3">
+                                        <i class="bi bi-emoji-smile text-success"></i>
+                                        <p class="mb-0">¡Esperamos que disfrutes tu pedido!</p>
+                                    </div>
+                                }
                             </div>
                         </div>
-                        <div class="qr-wrapper text-center w-100 w-md-auto">
-                            @if (!string.IsNullOrWhiteSpace(qrImage))
-                            {
-                                <img src="data:image/png;base64,@qrImage" alt="Código QR del pedido" class="qr-image shadow-sm" loading="lazy" decoding="async" />
-                            }
-                            else
-                            {
-                                <div id="generated-qr" class="qr-image shadow-sm d-flex justify-content-center align-items-center">
-                                    <span class="text-muted small">Generando QR…</span>
+                        <div class="col-lg-7">
+                            <div class="status-timeline mb-4">
+                                <div class="timeline-step done">
+                                    <span class="dot"><i class="bi bi-check"></i></span>
+                                    <div>
+                                        <p class="title mb-0">Pedido confirmado</p>
+                                        <small>Pago recibido y orden registrada.</small>
+                                    </div>
                                 </div>
-                            }
-                            <div class="small text-muted mt-2">Mantén la pantalla en brillo alto para facilitar el escaneo.</div>
-                        </div>
-                    </div>
-
-                    <div class="row mt-4 g-3">
-                        <div class="col-12 col-md-6">
-                            <div class="info-tile">
-                                <h3 class="h6 fw-semibold mb-1">¿Dónde presentarlo?</h3>
-                                <p class="text-muted mb-0">Dirígete al módulo de cocina SnackGol y muestra este QR al staff. Ellos verificarán tu pedido antes de entregarlo.</p>
+                                <div class="timeline-step @(isPreparing || isReadyForPickup || isDelivered ? "done" : "pending") @(isPreparing ? "active" : "")">
+                                    <span class="dot">@if(isPreparing || isReadyForPickup || isDelivered){<i class="bi bi-check"></i>}</span>
+                                    <div>
+                                        <p class="title mb-0">En preparación</p>
+                                        <small>@(isPreparing ? "Tu pedido se está preparando ahora..." : "El equipo de cocina prepara tu orden.")</small>
+                                    </div>
+                                </div>
+                                <div class="timeline-step @(isReadyForPickup || isDelivered ? "done" : "pending") @(isReadyForPickup && !isDelivered ? "active pulse-step" : "")">
+                                    <span class="dot">@if(isReadyForPickup || isDelivered){<i class="bi bi-check"></i>}</span>
+                                    <div>
+                                        <p class="title mb-0">Listo para recoger</p>
+                                        <small>@(isReadyForPickup && !isDelivered ? "¡Ve a recoger tu pedido ahora!" : "Te avisaremos cuando esté listo.")</small>
+                                    </div>
+                                </div>
+                                <div class="timeline-step @(isDelivered ? "done" : "pending")">
+                                    <span class="dot">@if(isDelivered){<i class="bi bi-check"></i>}</span>
+                                    <div>
+                                        <p class="title mb-0">Pedido entregado</p>
+                                        <small>@(isDelivered ? "¡Pedido entregado exitosamente!" : "El personal marcará este paso al entregarlo.")</small>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="info-grid mb-4">
+                                <div class="info-card">
+                                    <h3 class="h6 fw-semibold"><i class="bi bi-receipt me-2"></i>Resumen</h3>
+                                    <ul class="list-unstyled mb-0 small text-muted">
+                                        <li><strong>Orden:</strong> @(!string.IsNullOrWhiteSpace(Model.OrderId) ? Model.OrderId : "Pendiente")</li>
+                                        <li><strong>Código:</strong> <span data-pickup-code>@pickupCode</span></li>
+                                        <li><strong>Estado:</strong> <span class="@statusClass">@statusDisplay</span></li>
+                                        <li><strong>Total:</strong> @Model.Total.ToString("C0", new System.Globalization.CultureInfo("es-CO"))</li>
+                                    </ul>
+                                </div>
+                                <div class="info-card">
+                                    <h3 class="h6 fw-semibold"><i class="bi bi-lightbulb me-2"></i>Tips rápidos</h3>
+                                    <ul class="tips-list mb-0">
+                                        <li>Llega 5 minutos antes para evitar filas.</li>
+                                        <li>¿Otra persona retira? Compártele este QR.</li>
+                                        <li>Ante cualquier duda, busca al staff SnackGol.</li>
+                                    </ul>
+                                </div>
+                            </div>
+                            <div class="d-flex flex-column flex-md-row gap-2">
+                                <a asp-controller="Home" asp-action="Index" class="btn btn-outline-secondary flex-fill">
+                                    <i class="bi bi-house me-1"></i>Volver al inicio
+                                </a>
+                                <a asp-controller="Carrito" asp-action="Index" class="btn btn-secondary flex-fill">
+                                    <i class="bi bi-cart me-1"></i>Ver carrito
+                                </a>
+                                <a asp-controller="Home" asp-action="Index" class="btn btn-outline-secondary flex-fill d-none d-xl-inline-flex">
+                                    <i class="bi bi-grid me-1"></i>Ver catálogo
+                                </a>
                             </div>
                         </div>
-                        <div class="col-12 col-md-6">
-                            <div class="info-tile">
-                                <h3 class="h6 fw-semibold mb-1">Recuerda</h3>
-                                <p class="text-muted mb-0">Puedes reenviar el código a otra persona. Si cerraste esta página, siempre podrás obtener tu QR desde el panel de pedidos.</p>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="d-flex flex-column flex-sm-row gap-2 mt-4">
-                        <a asp-controller="Home" asp-action="Index" class="btn btn-outline-secondary flex-fill flex-sm-grow-0">Volver al inicio</a>
-                        <a asp-controller="Carrito" asp-action="Index" class="btn btn-secondary flex-fill flex-sm-grow-0">Ver carrito</a>
-                        <a asp-controller="Home" asp-action="Index" class="btn btn-outline-secondary d-none d-md-inline-flex">Ver catálogo</a>
                     </div>
                 </div>
             </div>
 
             @if (!string.IsNullOrWhiteSpace(flash))
             {
-                <div class="alert alert-success mt-3" role="alert">@flash</div>
+                <div class="alert alert-success mt-3 d-flex align-items-center" role="alert">
+                    <i class="bi bi-check-circle-fill me-2"></i>
+                    @flash
+                </div>
             }
         </div>
     </div>
@@ -86,58 +270,836 @@
 
 @section Styles {
     <style>
-        .confirmation-card .order-detail {
+        /* ===== Variables globales y colores con buen contraste ===== */
+        :root {
+            --color-primary: #e85a24;
+            --color-primary-dark: #c74a1a;
+            --color-primary-light: #ff8c5a;
+            --color-success: #0d7a3e;
+            --color-success-light: #10a04f;
+            --color-warning: #b8860b;
+            --color-warning-light: #daa520;
+            --color-muted: #4a5568;
+            --color-text: #1a202c;
+            --color-text-light: #4a5568;
+            --color-bg-light: #f7f8fa;
+            --color-border: #e2e8f0;
+            --radius-sm: 0.5rem;
+            --radius-md: 1rem;
+            --radius-lg: 1.5rem;
+            --shadow-sm: 0 1px 3px rgba(0,0,0,0.1);
+            --shadow-md: 0 4px 12px rgba(0,0,0,0.1);
+            --shadow-lg: 0 10px 30px rgba(0,0,0,0.12);
+        }
+
+        /* ===== Estados por color (con buen contraste WCAG AA) ===== */
+        .status-confirmed { --status-color: var(--color-primary); --status-bg: rgba(232, 90, 36, 0.1); }
+        .status-preparing { --status-color: var(--color-warning); --status-bg: rgba(184, 134, 11, 0.1); }
+        .status-ready { --status-color: var(--color-success); --status-bg: rgba(13, 122, 62, 0.1); }
+        .status-delivered { --status-color: var(--color-muted); --status-bg: rgba(74, 85, 104, 0.1); }
+
+        .status-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background-color: var(--status-color);
+            flex-shrink: 0;
+        }
+        .status-dot:not(.status-delivered) {
+            animation: pulse-dot 2s infinite;
+        }
+        @@keyframes pulse-dot {
+            0%, 100% { box-shadow: 0 0 0 0 var(--status-bg); }
+            50% { box-shadow: 0 0 0 6px transparent; }
+        }
+
+        /* ===== Contenedor principal - Mobile First ===== */
+        .container {
+            padding-left: 1rem;
+            padding-right: 1rem;
+        }
+
+        /* ===== Card principal ===== */
+        .confirmation-card {
+            border-radius: var(--radius-lg);
+            overflow: hidden;
+        }
+        
+        .confirmation-hero {
+            background: linear-gradient(145deg, var(--color-primary) 0%, var(--color-primary-dark) 100%);
+            padding: 1.5rem;
+        }
+        .confirmation-card.status-confirmed .confirmation-hero {
+            background: linear-gradient(145deg, var(--color-primary) 0%, var(--color-primary-dark) 100%);
+        }
+        .confirmation-card.status-preparing .confirmation-hero {
+            background: linear-gradient(145deg, var(--color-warning) 0%, #96700a 100%);
+        }
+        .confirmation-card.status-ready .confirmation-hero {
+            background: linear-gradient(145deg, var(--color-success) 0%, #085a2c 100%);
+        }
+        .confirmation-card.status-delivered .confirmation-hero {
+            background: linear-gradient(145deg, var(--color-muted) 0%, #2d3748 100%);
+        }
+        
+        .confirmation-hero .hero-logo {
+            width: 64px;
+            height: auto;
+            flex-shrink: 0;
+        }
+        
+        .status-badge {
+            font-size: 0.7rem;
+            letter-spacing: 0.05em;
+            background-color: rgba(255,255,255,0.25);
+            padding: 0.4rem 0.85rem;
+            border-radius: 999px;
+            text-transform: uppercase;
+            font-weight: 700;
+            color: #fff;
+        }
+        
+        .pulse-icon {
+            animation: pulse-icon 1s infinite;
+        }
+        @@keyframes pulse-icon {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.15); }
+        }
+        
+        .confirmation-hero h1 {
+            font-size: 1.35rem;
+            line-height: 1.3;
+            margin-bottom: 0.5rem;
+            color: #fff;
+        }
+        
+        .hero-subtitle {
+            font-size: 0.9rem;
+            opacity: 0.95;
+            color: #fff;
+            line-height: 1.5;
+        }
+        
+        /* ===== Stats chips - Mobile optimized ===== */
+        .hero-stats {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 0.75rem;
+            margin-top: 1.25rem;
+        }
+        
+        .hero-stats .stat-chip {
+            background-color: rgba(255,255,255,0.2);
+            padding: 0.7rem 0.85rem;
+            border-radius: var(--radius-md);
+            backdrop-filter: blur(4px);
+        }
+        
+        .hero-stats .label {
+            text-transform: uppercase;
+            font-size: 0.6rem;
+            letter-spacing: 0.06em;
+            opacity: 0.9;
+            display: block;
+            color: #fff;
+            margin-bottom: 0.2rem;
+        }
+        
+        .hero-stats .value {
+            font-weight: 700;
+            font-size: 0.85rem;
+            color: #fff;
+            word-break: break-all;
+        }
+        
+        .copy-btn {
+            border-radius: 999px;
+            padding: 0.15rem 0.5rem;
+            font-size: 0.75rem;
+            background: rgba(255,255,255,0.3);
+            border: none;
+            color: #fff;
+        }
+        .copy-btn:hover, .copy-btn:focus {
+            background: rgba(255,255,255,0.4);
+            color: #fff;
+        }
+        .copy-btn.copied {
+            background-color: var(--color-success);
+            color: #fff;
+        }
+
+        /* ===== Card body ===== */
+        .confirmation-card .card-body {
+            padding: 1.25rem;
+            background: #fff;
+        }
+
+        /* ===== Panel QR - Mobile optimized ===== */
+        .qr-panel {
+            background: var(--color-bg-light);
+            border-radius: var(--radius-md);
+            padding: 1.25rem 1rem;
+            border: 2px solid var(--color-border);
+            transition: border-color 0.3s;
+        }
+        .qr-panel.status-ready {
+            border-color: var(--color-success);
+            background: rgba(13, 122, 62, 0.05);
+        }
+        .qr-panel.status-preparing {
+            border-color: var(--color-warning);
+            background: rgba(184, 134, 11, 0.05);
+        }
+        .qr-panel.status-delivered {
+            border-color: var(--color-muted);
+            opacity: 0.85;
+        }
+
+        .qr-container {
+            position: relative;
+            display: inline-block;
+            max-width: 100%;
+        }
+        
+        .qr-image {
+            width: 100%;
+            max-width: 220px;
+            border-radius: var(--radius-md);
+            background: #fff;
+            padding: 1rem;
+            margin: 0 auto;
+            display: block;
+            position: relative;
+            z-index: 2;
+            box-shadow: var(--shadow-sm);
+        }
+        
+        .qr-pulse-ring {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: calc(100% + 16px);
+            height: calc(100% + 16px);
+            border-radius: calc(var(--radius-md) + 4px);
+            border: 3px solid var(--status-color, var(--color-primary));
+            animation: pulse-ring 2s infinite;
+            z-index: 1;
+        }
+        @@keyframes pulse-ring {
+            0% { transform: translate(-50%, -50%) scale(0.96); opacity: 1; }
+            100% { transform: translate(-50%, -50%) scale(1.04); opacity: 0; }
+        }
+
+        .qr-delivered-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(255,255,255,0.92);
+            border-radius: var(--radius-md);
             display: flex;
             flex-direction: column;
-            min-width: 140px;
+            align-items: center;
+            justify-content: center;
+            z-index: 3;
         }
-        .confirmation-card .order-detail .label {
-            font-size: .75rem;
-            text-transform: uppercase;
-            color: #6c757d;
-            letter-spacing: .04em;
+        .qr-delivered-overlay i {
+            font-size: 2.5rem;
+            color: var(--color-success);
+            margin-bottom: 0.4rem;
         }
-        .confirmation-card .order-detail .value {
-            font-weight: 600;
+        .qr-delivered-overlay span {
+            font-weight: 700;
+            color: var(--color-success);
             font-size: 1rem;
         }
-        .confirmation-card .qr-wrapper {
-            max-width: 420px; /* increase for larger screens */
+
+        /* ===== QR Actions - Touch friendly ===== */
+        .qr-actions {
+            margin-top: 1rem;
         }
-        .confirmation-card .qr-image {
-            width: 100%;
-            max-width: 320px; /* increased value */
-            border-radius: 1rem;
-            background-color: #fff;
+        .qr-actions .btn {
+            border-radius: var(--radius-sm);
+            font-size: 0.85rem;
+            padding: 0.6rem 1rem;
+            min-height: 44px; /* Touch target mínimo */
+        }
+        .btn-fullscreen {
+            font-weight: 600;
+            background: var(--color-primary);
+            border-color: var(--color-primary);
+        }
+        .btn-fullscreen:hover, .btn-fullscreen:focus {
+            background: var(--color-primary-dark);
+            border-color: var(--color-primary-dark);
+        }
+        
+        .qr-tip {
+            font-size: 0.8rem;
+            color: var(--color-text-light);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.4rem;
+            text-align: center;
+            line-height: 1.4;
+        }
+        .qr-tip i {
+            color: var(--color-warning);
+            flex-shrink: 0;
+        }
+        
+        .delivered-message {
+            color: var(--color-success);
+            font-weight: 600;
+            text-align: center;
+        }
+        .delivered-message i {
+            font-size: 1.5rem;
+            display: block;
+            margin-bottom: 0.25rem;
+        }
+
+        /* ===== Timeline - Mobile optimized ===== */
+        .status-timeline {
+            display: flex;
+            flex-direction: column;
+            gap: 0.6rem;
+            margin-bottom: 1.25rem;
+        }
+        .timeline-step {
+            display: flex;
+            gap: 0.75rem;
+            align-items: flex-start;
+            padding: 0.75rem;
+            border-radius: var(--radius-sm);
+            background: var(--color-bg-light);
+            transition: all 0.3s;
+        }
+        .timeline-step.active {
+            background: var(--status-bg, rgba(232, 90, 36, 0.08));
+            border: 1px solid var(--status-color, var(--color-primary));
+        }
+        .timeline-step.pulse-step {
+            animation: pulse-step 2s infinite;
+        }
+        @@keyframes pulse-step {
+            0%, 100% { box-shadow: 0 0 0 0 rgba(13, 122, 62, 0.25); }
+            50% { box-shadow: 0 0 0 6px transparent; }
+        }
+        .timeline-step .dot {
+            width: 22px;
+            height: 22px;
+            border-radius: 50%;
+            background: var(--color-border);
+            flex-shrink: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.65rem;
+            color: #fff;
+        }
+        .timeline-step.done .dot {
+            background: var(--color-primary);
+        }
+        .timeline-step.active .dot {
+            background: var(--status-color, var(--color-primary));
+            box-shadow: 0 0 0 3px var(--status-bg, rgba(232, 90, 36, 0.2));
+        }
+        .timeline-step .title {
+            font-weight: 600;
+            font-size: 0.88rem;
+            color: var(--color-text);
+            margin-bottom: 0.1rem;
+        }
+        .timeline-step small {
+            color: var(--color-text-light);
+            font-size: 0.78rem;
+            line-height: 1.4;
+        }
+        .timeline-step.pending {
+            opacity: 0.55;
+        }
+
+        /* ===== Info cards - Mobile grid ===== */
+        .info-grid {
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+            margin-bottom: 1.25rem;
+        }
+        .info-card {
+            background: #fff;
+            border-radius: var(--radius-sm);
+            padding: 1rem;
+            border: 1px solid var(--color-border);
+        }
+        .info-card h3 {
+            color: var(--color-text);
+            font-size: 0.9rem;
+            margin-bottom: 0.6rem;
+        }
+        .info-card ul {
+            font-size: 0.82rem;
+            color: var(--color-text-light);
+        }
+        .info-card li {
+            margin-bottom: 0.35rem;
+        }
+        .tips-list {
+            list-style: none;
+            padding-left: 0;
+        }
+        .tips-list li {
+            padding-left: 1.15rem;
+            position: relative;
+            margin-bottom: 0.4rem;
+        }
+        .tips-list li::before {
+            content: "✓";
+            position: absolute;
+            left: 0;
+            color: var(--color-success);
+            font-weight: bold;
+            font-size: 0.75rem;
+        }
+
+        /* ===== Botones de navegación ===== */
+        .confirmation-card .btn-outline-secondary {
+            border-color: var(--color-border);
+            color: var(--color-text);
+            font-size: 0.85rem;
+            min-height: 44px;
+        }
+        .confirmation-card .btn-outline-secondary:hover {
+            background: var(--color-bg-light);
+            border-color: var(--color-muted);
+        }
+        .confirmation-card .btn-secondary {
+            background: var(--color-text);
+            border-color: var(--color-text);
+            font-size: 0.85rem;
+            min-height: 44px;
+        }
+
+        /* ===== Fullscreen overlay ===== */
+        .qr-fullscreen-overlay {
+            position: fixed;
+            inset: 0;
+            background: #fff;
+            z-index: 9999;
+            overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
+        }
+        .fullscreen-content {
+            min-height: 100vh;
+            min-height: 100dvh; /* Dynamic viewport height para móviles */
+            display: flex;
+            flex-direction: column;
+            padding: 1rem;
+            padding-top: env(safe-area-inset-top, 1rem);
+            padding-bottom: env(safe-area-inset-bottom, 1rem);
+        }
+        .fullscreen-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+        }
+        .fullscreen-logo {
+            height: 32px;
+            width: auto;
+        }
+        .btn-close-fullscreen {
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            border: none;
+            background: var(--color-bg-light);
+            font-size: 1.1rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            color: var(--color-text);
+        }
+        .btn-close-fullscreen:active {
+            background: var(--color-border);
+        }
+        
+        .fullscreen-qr-container {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0.5rem;
+        }
+        
+        .qr-scan-ring {
+            position: relative;
             padding: 1.25rem;
+            border-radius: var(--radius-lg);
+            background: #fff;
+            box-shadow: var(--shadow-lg);
         }
-        .info-tile {
-            background-color: #f8f9fa;
-            border-radius: 1rem;
-            padding: 1.25rem;
-            height: 100%;
+        .qr-scan-ring::before {
+            content: '';
+            position: absolute;
+            inset: -3px;
+            border-radius: calc(var(--radius-lg) + 4px);
+            border: 3px solid var(--status-color, var(--color-primary));
+            animation: scan-ring 2s infinite;
         }
-        @@media (max-width: 992px) {
-            .confirmation-card .qr-image {
+        @@keyframes scan-ring {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.6; transform: scale(1.01); }
+        }
+        .scan-animation {
+            position: absolute;
+            top: 0;
+            left: 10%;
+            right: 10%;
+            height: 3px;
+            background: linear-gradient(90deg, transparent, var(--status-color, var(--color-primary)), transparent);
+            border-radius: 2px;
+            animation: scan-line 2.5s infinite;
+        }
+        @@keyframes scan-line {
+            0% { top: 5%; opacity: 0; }
+            10% { opacity: 1; }
+            90% { opacity: 1; }
+            100% { top: 95%; opacity: 0; }
+        }
+        
+        .fullscreen-qr-image {
+            width: min(75vw, 320px);
+            height: auto;
+            border-radius: var(--radius-md);
+        }
+        
+        .fullscreen-info {
+            text-align: center;
+            padding: 1rem;
+        }
+        .pickup-code-display {
+            background: linear-gradient(135deg, var(--color-primary), var(--color-primary-dark));
+            color: #fff;
+            padding: 0.85rem 1.5rem;
+            border-radius: var(--radius-md);
+            display: inline-block;
+            margin-bottom: 0.85rem;
+        }
+        .pickup-code-display .label {
+            font-size: 0.65rem;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            opacity: 0.9;
+            display: block;
+            margin-bottom: 0.15rem;
+        }
+        .pickup-code-display .code {
+            font-size: 1.25rem;
+            font-weight: 700;
+            letter-spacing: 0.04em;
+        }
+        .scan-instruction {
+            color: var(--color-text-light);
+            font-size: 0.85rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.4rem;
+            margin: 0;
+            line-height: 1.4;
+        }
+        .scan-instruction i {
+            color: var(--color-warning);
+            flex-shrink: 0;
+        }
+
+        /* ===== RESPONSIVE - Tablet (768px+) ===== */
+        @@media (min-width: 768px) {
+            .container {
+                padding-left: 1.5rem;
+                padding-right: 1.5rem;
+            }
+            
+            .confirmation-hero {
+                padding: 2rem;
+            }
+            .confirmation-hero .hero-logo {
+                width: 80px;
+            }
+            .confirmation-hero h1 {
+                font-size: 1.65rem;
+            }
+            
+            .hero-stats {
+                grid-template-columns: repeat(4, 1fr);
+                gap: 1rem;
+            }
+            .hero-stats .value {
+                font-size: 0.95rem;
+            }
+            
+            .confirmation-card .card-body {
+                padding: 2rem;
+            }
+            
+            .qr-image {
                 max-width: 260px;
             }
+            
+            .info-grid {
+                flex-direction: row;
+            }
+            .info-card {
+                flex: 1;
+            }
+            
+            .fullscreen-content {
+                padding: 1.5rem;
+            }
+            .fullscreen-qr-image {
+                width: min(60vw, 380px);
+            }
+            .pickup-code-display .code {
+                font-size: 1.5rem;
+            }
         }
-        @@media (max-width: 768px) {
+
+        /* ===== RESPONSIVE - Desktop (992px+) ===== */
+        @@media (min-width: 992px) {
+            .confirmation-hero {
+                padding: 2.5rem;
+            }
+            .confirmation-hero .hero-logo {
+                width: 100px;
+            }
+            .confirmation-hero h1 {
+                font-size: 1.85rem;
+            }
+            .hero-subtitle {
+                max-width: 520px;
+            }
+            
             .confirmation-card .card-body {
-                padding: 2rem 1.5rem !important;
+                padding: 2.5rem;
             }
-            .confirmation-card .order-detail {
-                min-width: unset;
+            
+            .qr-panel {
+                padding: 1.5rem;
             }
-            .confirmation-card .qr-image {
-                max-width: 180px; /* smaller for mobile */
-                margin: 0 auto;
+            .qr-image {
+                max-width: 280px;
+            }
+            
+            .timeline-step {
+                padding: 0.85rem 1rem;
+            }
+            
+            .fullscreen-qr-image {
+                width: min(50vw, 400px);
+            }
+        }
+
+        /* ===== Print styles ===== */
+        @@media print {
+            .qr-actions, .btn-close-fullscreen, .status-timeline, 
+            .info-grid, nav, footer, .alert {
+                display: none !important;
+            }
+            .confirmation-card {
+                box-shadow: none !important;
+            }
+            .confirmation-hero {
+                background: #333 !important;
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+            }
+            .qr-image {
+                max-width: 200px !important;
+            }
+        }
+
+        /* ===== Accesibilidad - Reduced motion ===== */
+        @@media (prefers-reduced-motion: reduce) {
+            .status-dot, .pulse-icon, .qr-pulse-ring, .scan-animation,
+            .timeline-step.pulse-step, .qr-scan-ring::before {
+                animation: none !important;
             }
         }
     </style>
 }
 
 @section Scripts {
+    <script>
+        document.addEventListener("DOMContentLoaded", () => {
+            const qrBase64 = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(qrImage));
+            const orderIdValue = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.OrderId ?? "pedido"));
+            const pickupCodeValue = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(pickupCode));
+            const isDelivered = @Html.Raw(isDelivered.ToString().ToLower());
+
+            // ===== Botón descargar QR =====
+            const downloadBtn = document.querySelector("[data-download-qr]");
+            if (downloadBtn && qrBase64) {
+                downloadBtn.addEventListener("click", () => {
+                    const cleanOrderId = (orderIdValue || "pedido").replace(/[^a-zA-Z0-9-_]/g, "");
+                    const link = document.createElement("a");
+                    link.href = `data:image/png;base64,${qrBase64}`;
+                    link.download = `snackgol-qr-${cleanOrderId}.png`;
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+                });
+            }
+
+            // ===== Botón compartir QR =====
+            const shareBtn = document.querySelector("[data-share-qr]");
+            if (shareBtn) {
+                shareBtn.addEventListener("click", async () => {
+                    const shareData = {
+                        title: "SnackGol - Tu pedido",
+                        text: `🍔 Mi pedido SnackGol está listo!\n📦 Orden: ${orderIdValue}\n🔑 Código: ${pickupCodeValue}\n\n¡Presenta este código para recoger!`,
+                        url: window.location.href
+                    };
+
+                    // Intentar compartir con imagen si es posible
+                    if (navigator.share && qrBase64) {
+                        try {
+                            // Convertir base64 a blob para compartir
+                            const response = await fetch(`data:image/png;base64,${qrBase64}`);
+                            const blob = await response.blob();
+                            const file = new File([blob], `snackgol-qr-${orderIdValue}.png`, { type: 'image/png' });
+                            
+                            if (navigator.canShare && navigator.canShare({ files: [file] })) {
+                                await navigator.share({
+                                    ...shareData,
+                                    files: [file]
+                                });
+                            } else {
+                                await navigator.share(shareData);
+                            }
+                        } catch (err) {
+                            if (err.name !== 'AbortError') {
+                                // Fallback: copiar al portapapeles
+                                copyToClipboard(shareData.text);
+                            }
+                        }
+                    } else if (navigator.share) {
+                        try {
+                            await navigator.share(shareData);
+                        } catch (err) {
+                            if (err.name !== 'AbortError') {
+                                copyToClipboard(shareData.text);
+                            }
+                        }
+                    } else {
+                        // Fallback para navegadores sin Web Share API
+                        copyToClipboard(shareData.text);
+                    }
+                });
+            }
+
+            function copyToClipboard(text) {
+                navigator.clipboard?.writeText(text).then(() => {
+                    showToast("Información copiada al portapapeles");
+                }).catch(() => {
+                    // Fallback ultra básico
+                    const textarea = document.createElement("textarea");
+                    textarea.value = text;
+                    document.body.appendChild(textarea);
+                    textarea.select();
+                    document.execCommand("copy");
+                    document.body.removeChild(textarea);
+                    showToast("Información copiada al portapapeles");
+                });
+            }
+
+            function showToast(message) {
+                const toast = document.createElement("div");
+                toast.className = "position-fixed bottom-0 start-50 translate-middle-x mb-4 px-4 py-2 bg-dark text-white rounded-pill shadow";
+                toast.style.zIndex = "10000";
+                toast.textContent = message;
+                document.body.appendChild(toast);
+                setTimeout(() => toast.remove(), 2500);
+            }
+
+            // ===== Botón copiar código =====
+            document.querySelectorAll("[data-copy-code]").forEach(btn => {
+                btn.addEventListener("click", () => {
+                    const value = btn.getAttribute("data-copy-value");
+                    if (!value || value.toLowerCase() === "pendiente") return;
+                    
+                    navigator.clipboard?.writeText(value).then(() => {
+                        const originalContent = btn.innerHTML;
+                        btn.innerHTML = "<i class='bi bi-check2'></i>";
+                        btn.classList.add("copied");
+                        setTimeout(() => {
+                            btn.innerHTML = originalContent;
+                            btn.classList.remove("copied");
+                        }, 1500);
+                    });
+                });
+            });
+
+            // ===== Pantalla completa =====
+            const overlay = document.getElementById("qr-fullscreen-overlay");
+            const openFullscreenBtn = document.querySelector("[data-open-fullscreen]");
+            const closeFullscreenBtn = document.querySelector("[data-close-fullscreen]");
+
+            if (openFullscreenBtn && overlay && !isDelivered) {
+                openFullscreenBtn.addEventListener("click", () => {
+                    overlay.style.display = "block";
+                    document.body.style.overflow = "hidden";
+                    
+                    // Intentar activar pantalla completa del navegador
+                    if (document.documentElement.requestFullscreen) {
+                        document.documentElement.requestFullscreen().catch(() => {});
+                    }
+                    
+                    // Intentar mantener pantalla encendida
+                    if ('wakeLock' in navigator) {
+                        navigator.wakeLock.request('screen').catch(() => {});
+                    }
+                });
+            }
+
+            if (closeFullscreenBtn && overlay) {
+                closeFullscreenBtn.addEventListener("click", closeFullscreen);
+            }
+
+            // Cerrar con tecla Escape
+            document.addEventListener("keydown", (e) => {
+                if (e.key === "Escape" && overlay?.style.display === "block") {
+                    closeFullscreen();
+                }
+            });
+
+            function closeFullscreen() {
+                overlay.style.display = "none";
+                document.body.style.overflow = "";
+                
+                if (document.exitFullscreen && document.fullscreenElement) {
+                    document.exitFullscreen().catch(() => {});
+                }
+            }
+
+            // ===== Auto-refresh del estado (polling cada 30s) =====
+            if (!isDelivered) {
+                setInterval(() => {
+                    // En una implementación real, aquí harías fetch al backend
+                    // para actualizar el estado del pedido
+                    console.log("Verificando estado del pedido...");
+                }, 30000);
+            }
+        });
+    </script>
+
     @if (string.IsNullOrWhiteSpace(qrImage) && !string.IsNullOrWhiteSpace(qrPayload))
     {
         <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.0/build/qrcode.min.js"></script>
@@ -145,52 +1107,43 @@
             document.addEventListener("DOMContentLoaded", () => {
                 const payload = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(qrPayload ?? string.Empty));
                 const fallback = document.getElementById("generated-qr");
-                const codeLabel = document.querySelector("[data-pickup-code]");
+                const fullscreenFallback = document.getElementById("fullscreen-generated-qr");
+                const codeLabels = document.querySelectorAll("[data-pickup-code], [data-pickup-code-fullscreen]");
 
-                if (!payload || !fallback || !window.QRCode) {
-                    return;
-                }
+                if (!payload || !window.QRCode) return;
 
                 try {
                     const decoded = atob(payload);
                     const parsed = JSON.parse(decoded);
-                    if (parsed?.code && codeLabel) {
-                        codeLabel.textContent = parsed.code;
+                    
+                    if (parsed?.PickupCode) {
+                        codeLabels.forEach(el => el.textContent = parsed.PickupCode);
                     }
 
-                    // Dynamic width based on viewport
-                    const computeWidth = () => {
-                        const vw = Math.max(document.documentElement.clientWidth || 0, window.innerWidth || 0);
-                        const desired = Math.floor(vw * 0.45); // 45% of viewport
-                        return Math.min(320, Math.max(120, desired));
+                    const generateQR = (container, width) => {
+                        if (!container) return;
+                        const canvas = document.createElement("canvas");
+                        QRCode.toCanvas(canvas, decoded, { 
+                            width: width, 
+                            errorCorrectionLevel: "H", 
+                            margin: 2,
+                            color: { dark: "#20232d", light: "#ffffff" }
+                        }, (error) => {
+                            if (!error) {
+                                canvas.style.width = "100%";
+                                canvas.style.height = "auto";
+                                canvas.style.borderRadius = "0.5rem";
+                                container.innerHTML = "";
+                                container.appendChild(canvas);
+                            }
+                        });
                     };
 
-                    const canvas = document.createElement("canvas");
-                    QRCode.toCanvas(canvas, decoded, { width: computeWidth(), errorCorrectionLevel: "M", margin: 1 }, (error) => {
-                        if (error) {
-                            console.error("No se pudo generar el código QR", error);
-                            return;
-                        }
-                        canvas.classList.add("w-100");
-                        fallback.innerHTML = "";
-                        fallback.appendChild(canvas);
-                    });
+                    generateQR(fallback, 280);
+                    generateQR(fullscreenFallback, 400);
 
-                    // Recompute on resize
-                    let resizeTimer = null;
-                    window.addEventListener('resize', () => {
-                        if (resizeTimer) window.clearTimeout(resizeTimer);
-                        resizeTimer = window.setTimeout(() => {
-                            QRCode.toCanvas(canvas, decoded, { width: computeWidth(), errorCorrectionLevel: "M", margin: 1 }, (error) => {
-                                if (error) {
-                                    console.error("No se pudo actualizar el tamaño del QR", error);
-                                    return;
-                                }
-                            });
-                        }, 150);
-                    });
                 } catch (error) {
-                    console.error("No se pudo preparar el QR de entrega", error);
+                    console.error("Error al generar QR:", error);
                 }
             });
         </script>

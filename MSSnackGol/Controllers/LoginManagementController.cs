@@ -1,6 +1,9 @@
-﻿using LibraryEntities;
+﻿using LibraryAuthentication;
+using LibraryConnection.ControllerAzure;
+using LibraryEntities;
 using LibraryEntities.Models;
 using Microsoft.AspNetCore.Mvc;
+using System.Net;
 
 namespace MSSnackGol.Controllers
 {
@@ -8,15 +11,45 @@ namespace MSSnackGol.Controllers
     [ApiController]
     public class LoginManagementController : ControllerBase
     {
+        private readonly JwtTokenHandler _jwtTokenHandler;
 
-        public LoginManagementController()
+        public LoginManagementController(JwtTokenHandler jwtTokenHandler)
         {
+            _jwtTokenHandler = jwtTokenHandler;
         }
 
         [HttpPost("login")]
         public IActionResult Login([FromBody] LoginRequest oLogin)
         {
-            throw new NotImplementedException();
+            try
+            {
+                // Primero verificar que exista el usuario y obtener su rol
+                UserAuthenticationController userAuthController = new UserAuthenticationController();
+                var user = userAuthController.GetUserIfValid(oLogin);
+                if (user == null)
+                {
+                    return StatusCode(401, new Response<dynamic>(false, HttpStatusCode.Unauthorized, "Invalid username or password"));
+                }
+
+                var roleName = user.Role?.name ?? string.Empty;
+                var authenticationResponse = _jwtTokenHandler.GenerateJwtToken(oLogin, user.id, roleName);
+                if (authenticationResponse == null)
+                {
+                    return StatusCode(401, new Response<dynamic>(false, HttpStatusCode.Unauthorized, Unauthorized()));
+                }
+                if (authenticationResponse.status == HttpStatusCode.OK)
+                {
+                    return Ok(authenticationResponse);
+                }
+                else
+                {
+                    return StatusCode((int)authenticationResponse.status, authenticationResponse);
+                }
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new Response<dynamic>(false, HttpStatusCode.InternalServerError, "Error Authenticate", ex.Message));
+            }
         }
     }
 }

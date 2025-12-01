@@ -116,7 +116,14 @@ namespace LibraryConnection.Migrations
                     order_date = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
                     status = table.Column<string>(type: "text", nullable: true),
                     total_gross_amount = table.Column<double>(type: "double precision", nullable: false),
-                    total_net_price = table.Column<double>(type: "double precision", nullable: false)
+                    total_net_price = table.Column<double>(type: "double precision", nullable: false),
+                    pickup_code = table.Column<string>(type: "text", nullable: true),
+                    pickup_token_hash = table.Column<string>(type: "text", nullable: true),
+                    pickup_payload_base64 = table.Column<string>(type: "text", nullable: true),
+                    pickup_qr_base64 = table.Column<string>(type: "text", nullable: true),
+                    pickup_generated_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
+                    pickup_redeemed_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
+                    pickup_verified_by = table.Column<string>(type: "text", nullable: true)
                 },
                 constraints: table =>
                 {
