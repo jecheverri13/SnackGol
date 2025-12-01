@@ -51,11 +51,29 @@
                             <a class="nav-link" href="/#contacto">Contacto</a>
                         </li>
                     </ul>
-                    <div class="d-flex mt-3 mt-lg-0 ms-lg-4 gap-2">
+                    <div class="d-flex mt-3 mt-lg-0 ms-lg-4 gap-2 align-items-center">
                         <a class="btn btn-outline-light" asp-area="" asp-controller="Home" asp-action="Privacy">Aviso de Privacidad</a>
                         <a class="btn btn-outline-light" asp-area="" asp-controller="Producto" asp-action="Create">
                             <i class="bi bi-plus-circle me-1"></i>Nuevo producto
                         </a>
+                        @if (User.Identity?.IsAuthenticated == true)
+                        {
+                            <span class="text-light d-none d-lg-inline me-2">
+                                <i class="bi bi-person-circle me-1"></i>@User.Identity.Name
+                            </span>
+                            <form asp-controller="Account" asp-action="Logout" method="post" class="d-inline">
+                                @Html.AntiForgeryToken()
+                                <button type="submit" class="btn btn-outline-light">
+                                    <i class="bi bi-box-arrow-right me-1"></i>Cerrar sesión
+                                </button>
+                            </form>
+                        }
+                        else
+                        {
+                            <a class="btn btn-outline-light" asp-controller="Account" asp-action="Login">
+                                <i class="bi bi-box-arrow-in-right me-1"></i>Iniciar sesión
+                            </a>
+                        }
                         <a class="btn btn-primary" asp-area="" asp-controller="Carrito" asp-action="Index">
                             <i class="bi bi-bag-check me-1"></i>Finalizar compra
                         </a>
