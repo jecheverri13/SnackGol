@@ -12,7 +12,7 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace LibraryConnection.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20251112020102_ActualizarModelo")]
+    [Migration("20251125144033_ActualizarModelo")]
     partial class ActualizarModelo
     {
         /// <inheritdoc />
@@ -162,6 +162,27 @@ namespace LibraryConnection.Migrations
 
                     b.Property<DateTime>("order_date")
                         .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("pickup_code")
+                        .HasColumnType("text");
+
+                    b.Property<DateTime?>("pickup_generated_at")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("pickup_payload_base64")
+                        .HasColumnType("text");
+
+                    b.Property<string>("pickup_qr_base64")
+                        .HasColumnType("text");
+
+                    b.Property<DateTime?>("pickup_redeemed_at")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("pickup_token_hash")
+                        .HasColumnType("text");
+
+                    b.Property<string>("pickup_verified_by")
+                        .HasColumnType("text");
 
                     b.Property<string>("status")
                         .HasColumnType("text");

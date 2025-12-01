@@ -1,0 +1,188 @@
+@model MSSnackGolFrontend.Models.PagoViewModel
+@{
+    ViewData["Title"] = "Confirmar Pago";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+    var co = new System.Globalization.CultureInfo("es-CO");
+}
+
+<div class="container py-4 py-lg-5">
+    <div class="d-flex flex-column flex-lg-row justify-content-center mb-4">
+        <div class="card shadow-sm" style="max-width: 500px; width: 100%;">
+            <div class="card-body p-4">
+                <h2 class="text-center mb-4 fw-bold">Confirmar Pago</h2>
+                
+                <form asp-action="ProcesarPago" method="post" id="formPago">
+                    <!-- Fecha -->
+                    <div class="mb-3">
+                        <label for="fecha" class="form-label fw-semibold">Fecha</label>
+                        <input type="text" class="form-control" id="fecha" name="fecha" value="@Model.Fecha.ToString("dd/MM/yyyy")" readonly />
+                    </div>
+
+                    <!-- Valor (subtotal) -->
+                    <div class="mb-3">
+                        <label for="valor" class="form-label fw-semibold">Valor</label>
+                        <input type="text" class="form-control" id="valor" name="valor" value="@Model.Subtotal.ToString("C0", co)" readonly />
+                        <input type="hidden" name="subtotal" value="@Model.Subtotal" />
+                    </div>
+
+                    <!-- IVA (19%) -->
+                    <div class="mb-3">
+                        <label for="iva" class="form-label fw-semibold">IVA (19%)</label>
+                        <input type="text" class="form-control" id="iva" name="iva" value="@Model.IVA.ToString("C0", co)" readonly />
+                        <input type="hidden" name="ivaAmount" value="@Model.IVA" />
+                    </div>
+
+                    <!-- Total -->
+                    <div class="mb-3">
+                        <label for="total" class="form-label fw-semibold">Total</label>
+                        <input type="text" class="form-control fw-bold" id="total" name="total" value="@Model.Total.ToString("C0", co)" readonly style="font-size: 1.1rem; color: #d32f2f;" />
+                        <input type="hidden" name="totalAmount" value="@Model.Total" />
+                    </div>
+
+                    <!-- Selector de método de pago -->
+                    <div class="mb-3">
+                        <label for="metodoPago" class="form-label fw-semibold">Método de Pago</label>
+                        <select class="form-select" id="metodoPago" name="metodoPago" required onchange="togglePaymentFields()">
+                            <option value="">Seleccionar método...</option>
+                            <option value="nequi">Nequi</option>
+                            <option value="tarjeta">Tarjeta de Crédito</option>
+                        </select>
+                    </div>
+
+                    <!-- Campo para Nequi -->
+                    <div class="mb-3" id="nequiField" style="display: none;">
+                        <label for="numeroCuentaNequi" class="form-label fw-semibold">Número de Nequi</label>
+                        <input type="text" class="form-control" id="numeroCuentaNequi" name="numeroCuentaNequi" 
+                               placeholder="3xxxxxxxxx" pattern="^3\d{9}$" maxlength="10"
+                               title="Debe ser 10 dígitos comenzando con 3" />
+                        <small class="form-text text-muted" id="nequiHint">Número de Celular no válido</small>
+                        <small class="form-text text-danger" id="nequiError" style="display: none;"></small>
+                    </div>
+
+                    <!-- Campo para Tarjeta de Crédito -->
+                    <div class="mb-3" id="tarjetaField" style="display: none;">
+                        <label for="numeroTarjeta" class="form-label fw-semibold">Número de Tarjeta de Crédito</label>
+                        <input type="text" class="form-control" id="numeroTarjeta" name="numeroTarjeta" 
+                               placeholder="XXXX XXXX XXXX XXXX" maxlength="19"
+                               title="Ingrese un número de tarjeta válido"
+                               onkeyup="formatCreditCard(this)" />
+                        <small class="form-text text-muted" id="tarjetaHint">Número de Tarjeta No válido</small>
+                        <small class="form-text text-danger" id="tarjetaError" style="display: none;"></small>
+                    </div>
+
+                    <!-- Botones de acción -->
+                    <div class="d-flex gap-2 mt-4">
+                        <a href="~/Carrito" class="btn btn-secondary flex-grow-1">
+                            <i class="bi bi-arrow-left me-2"></i>Volver
+                        </a>
+                        <button type="submit" class="btn btn-danger flex-grow-1" id="btnProcesar">
+                            <i class="bi bi-check-circle me-2"></i>Proceder con el Pago
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        // Toggle de campos según método de pago seleccionado
+        function togglePaymentFields() {
+            const metodoPago = document.getElementById('metodoPago').value;
+            const nequiField = document.getElementById('nequiField');
+            const tarjetaField = document.getElementById('tarjetaField');
+            const numeroCuentaNequi = document.getElementById('numeroCuentaNequi');
+            const numeroTarjeta = document.getElementById('numeroTarjeta');
+
+            // Limpiar valores y ocultar campos
+            nequiField.style.display = 'none';
+            tarjetaField.style.display = 'none';
+            numeroCuentaNequi.value = '';
+            numeroTarjeta.value = '';
+
+            if (metodoPago === 'nequi') {
+                nequiField.style.display = 'block';
+                numeroCuentaNequi.required = true;
+                numeroTarjeta.required = false;
+            } else if (metodoPago === 'tarjeta') {
+                tarjetaField.style.display = 'block';
+                numeroTarjeta.required = true;
+                numeroCuentaNequi.required = false;
+            }
+        }
+
+        // Formatear número de tarjeta con espacios (XXXX XXXX XXXX XXXX)
+        function formatCreditCard(input) {
+            let value = input.value.replace(/\s+/g, '').replace(/[^0-9]/gi, '');
+            let formattedValue = '';
+            for (let i = 0; i < value.length; i++) {
+                if (i > 0 && i % 4 === 0) {
+                    formattedValue += ' ';
+                }
+                formattedValue += value[i];
+            }
+            input.value = formattedValue;
+        }
+
+        // Validar formulario antes de enviar
+        document.getElementById('formPago').addEventListener('submit', async function (e) {
+            e.preventDefault();
+
+            const metodoPago = document.getElementById('metodoPago').value;
+            const numeroCuentaNequi = document.getElementById('numeroCuentaNequi').value;
+            const numeroTarjeta = document.getElementById('numeroTarjeta').value;
+            const nequiError = document.getElementById('nequiError');
+            const tarjetaError = document.getElementById('tarjetaError');
+
+            // Validar Nequi
+            if (metodoPago === 'nequi') {
+                const nequiPattern = /^3\d{9}$/;
+                if (!nequiPattern.test(numeroCuentaNequi)) {
+                    nequiError.textContent = 'Número de Nequi inválido. Debe ser 10 dígitos comenzando con 3.';
+                    nequiError.style.display = 'block';
+                    document.getElementById('numeroCuentaNequi').classList.add('is-invalid');
+                    return;
+                } else {
+                    nequiError.style.display = 'none';
+                    document.getElementById('numeroCuentaNequi').classList.remove('is-invalid');
+                }
+            }
+
+            // Validar Tarjeta de Crédito
+            if (metodoPago === 'tarjeta') {
+                const cardNumber = numeroTarjeta.replace(/\s+/g, '');
+                if (!isValidCreditCard(cardNumber)) {
+                    tarjetaError.textContent = 'Número de tarjeta de crédito inválido.';
+                    tarjetaError.style.display = 'block';
+                    document.getElementById('numeroTarjeta').classList.add('is-invalid');
+                    return;
+                } else {
+                    tarjetaError.style.display = 'none';
+                    document.getElementById('numeroTarjeta').classList.remove('is-invalid');
+                }
+            }
+
+            // Si todo es válido, enviar formulario
+            this.submit();
+        });
+
+        // Validación Luhn en el cliente (también se valida en backend)
+        function isValidCreditCard(cardNumber) {
+            if (!cardNumber || !/^\d+$/.test(cardNumber)) return false;
+
+            let sum = 0;
+            let alternate = false;
+            for (let i = cardNumber.length - 1; i >= 0; i--) {
+                let digit = parseInt(cardNumber[i], 10);
+                if (alternate) {
+                    digit *= 2;
+                    if (digit > 9) digit -= 9;
+                }
+                sum += digit;
+                alternate = !alternate;
+            }
+            return sum % 10 === 0;
+        }
+    </script>
+}

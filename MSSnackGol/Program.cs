@@ -17,6 +17,7 @@ builder.Services.AddDbContext<ApplicationDbContext>();
 
 // Registrar servicios de aplicación
 builder.Services.AddSingleton<IQRGeneratorService, QRGeneratorService>();
+builder.Services.AddScoped<IPaymentValidationService, PaymentValidationService>();
 
 var environment = builder.Environment.EnvironmentName;
 builder.Configuration.SetBasePath(Directory.GetCurrentDirectory())
