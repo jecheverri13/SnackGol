@@ -85,7 +85,7 @@ namespace MSSnackGol.Controllers
         }
 
         [HttpPost("Create")]
-        public IActionResult Create([FromBody] ProductCreateRequest req)
+        public IActionResult Create([FromBody] LibraryConnection.Dtos.ProductCreateRequest req)
         {
             try
             {
