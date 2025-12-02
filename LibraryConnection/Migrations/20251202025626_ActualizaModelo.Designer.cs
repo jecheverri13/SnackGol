@@ -12,8 +12,8 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace LibraryConnection.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20251201224554_SeedUsersAndRoles")]
-    partial class SeedUsersAndRoles
+    [Migration("20251202025626_ActualizaModelo")]
+    partial class ActualizaModelo
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)

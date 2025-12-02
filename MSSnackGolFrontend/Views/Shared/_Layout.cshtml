@@ -55,6 +55,12 @@
                         @if (isAdmin)
                         {
                             <li class="nav-item">
+                                <a class="nav-link@(controller.Equals("AdminPedidos", StringComparison.OrdinalIgnoreCase) ? " active" : string.Empty)" asp-area="" asp-controller="AdminPedidos" asp-action="Index">
+                                    <i class="bi bi-list-check me-1"></i>Pedidos nuevos
+                                </a>
+                            </li>
+
+                            <li class="nav-item">
                                 <a class="nav-link@(controller.Equals("Carrito", StringComparison.OrdinalIgnoreCase) ? " active" : string.Empty)" asp-area="" asp-controller="Carrito" asp-action="Index">Carrito</a>
                             </li>
                         }

@@ -8,6 +8,9 @@
     @await RenderSectionAsync("Styles", required: false)
 </head>
 <body>
+    @{
+        bool isAdmin = User?.Identity?.IsAuthenticated == true && User.IsInRole("Admin");
+    }
     <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
         <div class="container">
             <a class="navbar-brand" href="/">SnackGOL</a>
@@ -15,6 +18,10 @@
                 <a class="nav-link" href="/Home">Inicio</a>
                 <a class="nav-link" href="/Carrito">Carrito</a>
                 <a class="nav-link" href="/Producto">Producto</a>
+                @if (isAdmin)
+                {
+                    <a class="nav-link" asp-area="" asp-controller="AdminPedidos" asp-action="Index">Pedidos nuevos</a>
+                }
             </div>
         </div>
     </nav>

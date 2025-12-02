@@ -334,6 +334,91 @@ namespace MSSnackGol.Controllers
         }
         
         /// <summary>
+        /// Obtiene los pedidos "nuevos" para administración según una ventana de tiempo.
+        /// Query param `window` acepta valores como '60m', '1h' o 'today'. Por defecto '60m'.
+        /// </summary>
+        [HttpGet("New")]
+        [Authorize(Roles = "Admin")]
+        public IActionResult GetNewOrders([FromQuery] string? window = "60m", [FromQuery] int page = 1, [FromQuery] int pageSize = 50)
+        {
+            try
+            {
+                // Interpretar ventana
+                DateTime fromUtc;
+                var now = DateTime.UtcNow;
+                if (string.IsNullOrWhiteSpace(window)) window = "60m";
+                window = window.Trim().ToLowerInvariant();
+
+                if (window == "today")
+                {
+                    fromUtc = now.Date;
+                }
+                else if (window.EndsWith("h") && double.TryParse(window[..^1], out var hours))
+                {
+                    fromUtc = now.AddHours(-hours);
+                }
+                else if (window.EndsWith("m") && double.TryParse(window[..^1], out var minutes))
+                {
+                    fromUtc = now.AddMinutes(-minutes);
+                }
+                else if (double.TryParse(window, out var minutes2))
+                {
+                    fromUtc = now.AddMinutes(-minutes2);
+                }
+                else
+                {
+                    // Fallback a 60 minutos
+                    fromUtc = now.AddMinutes(-60);
+                }
+
+                using var db = new ApplicationDbContext();
+
+                var query = db.orders
+                    .Include(o => o.OrderLines)
+                    .Where(o => (o.status ?? StatusConfirmed) == StatusConfirmed && o.order_date >= fromUtc)
+                    .OrderByDescending(o => o.order_date);
+
+                // Paginación básica
+                var total = query.Count();
+                var items = query
+                    .Skip((Math.Max(page, 1) - 1) * Math.Max(pageSize, 1))
+                    .Take(Math.Max(pageSize, 1))
+                    .Select(o => new
+                    {
+                        orderId = o.order_id,
+                        status = o.status ?? StatusConfirmed,
+                        total = o.total_net_price,
+                        orderDate = o.order_date,
+                        pickupCode = o.pickup_code,
+                        itemCount = o.OrderLines != null ? o.OrderLines.Sum(ol => (int)ol.quantity) : 0,
+                        items = o.OrderLines != null ? o.OrderLines.Select(ol => new
+                        {
+                            item = ol.item,
+                            description = ol.description,
+                            quantity = ol.quantity
+                        }).ToList() : null
+                    })
+                    .ToList();
+
+                var result = new
+                {
+                    totalCount = total,
+                    page,
+                    pageSize,
+                    data = items
+                };
+
+                return StatusCode((int)HttpStatusCode.OK, new Response<dynamic>(true, HttpStatusCode.OK, result));
+            }
+            catch (Exception ex)
+            {
+                const string errorMessage = "Error al obtener los pedidos nuevos";
+                _logger.LogError(ex, "{ErrorMessage}", errorMessage);
+                return StatusCode((int)HttpStatusCode.InternalServerError, new Response<dynamic>(false, HttpStatusCode.InternalServerError, errorMessage, ex.Message));
+            }
+        }
+        
+        /// <summary>
         /// Realiza el checkout del carrito actual, genera la orden y prepara el QR de retiro.
         /// </summary>
         [HttpPost("Checkout")]
