@@ -83,5 +83,46 @@ namespace MSSnackGol.Controllers
                     new Response<dynamic>(false, HttpStatusCode.InternalServerError, "GetProduct", ex.Message));
             }
         }
+
+        [HttpPost("Create")]
+        public IActionResult Create([FromBody] LibraryConnection.Dtos.ProductCreateRequest req)
+        {
+            try
+            {
+                using var db = new ApplicationDbContext();
+                var p = new LibraryConnection.DbSet.Product
+                {
+                    category_id = req.category_id,
+                    name = req.name,
+                    description = req.description,
+                    price = req.price,
+                    stock = req.stock,
+                    image_url = req.image_url,
+                    is_active = req.is_active
+                };
+
+                db.products.Add(p);
+                db.SaveChanges();
+
+                var dto = new ProductDto
+                {
+                    id = p.id,
+                    category_id = p.category_id,
+                    name = p.name,
+                    description = p.description,
+                    price = p.price,
+                    stock = p.stock,
+                    image_url = p.image_url,
+                    is_active = p.is_active
+                };
+
+                return StatusCode((int)HttpStatusCode.Created, new Response<ProductDto>(true, HttpStatusCode.Created, dto));
+            }
+            catch (Exception ex)
+            {
+                return StatusCode((int)HttpStatusCode.InternalServerError,
+                    new Response<dynamic>(false, HttpStatusCode.InternalServerError, "CreateProduct", ex.Message));
+            }
+        }
     }
 }

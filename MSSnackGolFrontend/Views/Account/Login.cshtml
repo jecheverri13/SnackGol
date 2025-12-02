@@ -1,11 +1,12 @@
 @model MSSnackGolFrontend.Models.LoginViewModel
 @{
     ViewData["Title"] = "Iniciar sesión";
+    Layout = "_LayoutLogin";
 }
 
 <style>
     .login-card {
-        max-width: 720px;
+        max-width: 420px;
         margin: 48px auto;
         background: #0f1220;
         color: #e7e7ea;
@@ -14,32 +15,64 @@
         box-shadow: 0 6px 24px rgba(4,6,12,0.6);
     }
     .login-card .form-control {
-        background: rgba(255,255,255,0.02);
-        border: 1px solid rgba(255,255,255,0.04);
-        color: #ddd;
+        background: rgba(255,255,255,0.05);
+        border: 1px solid rgba(255,255,255,0.1);
+        color: #fff;
+    }
+    .login-card .form-control:focus {
+        background: rgba(255,255,255,0.08);
+        border-color: #ea5b21;
+        color: #fff;
+        box-shadow: 0 0 0 0.2rem rgba(234, 91, 33, 0.25);
+    }
+    .login-card .form-control::placeholder {
+        color: rgba(255,255,255,0.4);
     }
     .login-card label { color: #d6d6da; }
-    .btn-orange { background: #ea5b21; border: none; color: white; }
+    .login-card .input-group .btn {
+        background: rgba(255,255,255,0.05);
+        border: 1px solid rgba(255,255,255,0.1);
+        border-left: none;
+        color: #aaa;
+    }
+    .login-card .input-group .btn:hover {
+        background: rgba(255,255,255,0.1);
+        color: #fff;
+    }
+    .btn-orange { 
+        background: #ea5b21; 
+        border: none; 
+        color: white; 
+    }
+    .btn-orange:hover {
+        background: #d14e1a;
+        color: white;
+    }
     .validation-summary-errors { color: #ffb3b3; }
 </style>
 
 <div class="login-card">
-    <h2 class="mb-4">Escríbenos</h2>
+    <h2 class="mb-4">Iniciar Sesión</h2>
 
-    <!-- Temporary: post directly to LoginDebug to confirm server receives form -->
-    <form action="/Account/Login" method="post" novalidate>
+    <form asp-controller="Account" asp-action="Login" method="post">
+        @Html.AntiForgeryToken()
         <div asp-validation-summary="ModelOnly" class="validation-summary-errors"></div>
         <input type="hidden" asp-for="ReturnUrl" />
 
         <div class="mb-3">
             <label asp-for="Email" class="form-label">Correo electrónico</label>
-            <input asp-for="Email" type="email" class="form-control" placeholder="nombre@empresa.com" />
+            <input asp-for="Email" type="email" class="form-control" placeholder="nombre@empresa.com" autocomplete="email" />
             <span asp-validation-for="Email" class="text-danger"></span>
         </div>
 
         <div class="mb-3">
             <label asp-for="Password" class="form-label">Contraseña</label>
-            <input asp-for="Password" type="password" class="form-control" placeholder="Contraseña" />
+            <div class="input-group">
+                <input asp-for="Password" type="password" class="form-control" placeholder="Contraseña" autocomplete="current-password" id="passwordInput" />
+                <button class="btn btn-outline-secondary" type="button" id="togglePassword" tabindex="-1">
+                    <i class="bi bi-eye" id="toggleIcon"></i>
+                </button>
+            </div>
             <span asp-validation-for="Password" class="text-danger"></span>
         </div>
 
@@ -48,13 +81,30 @@
             <div class="alert alert-danger">@Model.ErrorMessage</div>
         }
 
-        <div class="d-grid mt-3">
-            <input type="submit" value="Iniciar Sesión" class="btn btn-orange btn-lg" />
+        <div class="d-grid mt-4">
+            <button type="submit" class="btn btn-orange btn-lg">
+                <i class="bi bi-box-arrow-in-right me-2"></i>Iniciar Sesión
+            </button>
         </div>
     </form>
-
 </div>
 
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />
+    <script>
+        document.getElementById('togglePassword').addEventListener('click', function() {
+            const passwordInput = document.getElementById('passwordInput');
+            const toggleIcon = document.getElementById('toggleIcon');
+            
+            if (passwordInput.type === 'password') {
+                passwordInput.type = 'text';
+                toggleIcon.classList.remove('bi-eye');
+                toggleIcon.classList.add('bi-eye-slash');
+            } else {
+                passwordInput.type = 'password';
+                toggleIcon.classList.remove('bi-eye-slash');
+                toggleIcon.classList.add('bi-eye');
+            }
+        });
+    </script>
 }

@@ -23,7 +23,10 @@
             <h2 class="section-title mb-1">Catálogo de productos</h2>
             <p class="text-muted mb-0">Gestiona, edita o consulta la información de cada producto publicado en la tienda.</p>
         </div>
-        <a asp-action="Create" class="btn btn-primary btn-lg"><i class="bi bi-plus-circle me-2"></i>Nuevo producto</a>
+        @if (User.IsInRole("Admin"))
+        {
+            <a asp-action="Create" class="btn btn-primary btn-lg"><i class="bi bi-plus-circle me-2"></i>Nuevo producto</a>
+        }
     </div>
 
     <div class="catalog-toolbar position-relative">

@@ -2,6 +2,7 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.EntityFrameworkCore.Storage;
+using System.ComponentModel.DataAnnotations;
 
 namespace LibraryConnection.Context
 {
@@ -168,6 +169,12 @@ namespace LibraryConnection.Context
                 entity.HasIndex(e => new { e.cart_id, e.product_id }).IsUnique();
             });
 
+            // Seed: Roles
+            modelBuilder.Entity<Role>().HasData(
+                new Role { id = 1, name = "Admin", description = "Administrador" },
+                new Role { id = 2, name = "Cliente", description = "Cliente" }
+            );
+
             // Seed: Categories
             modelBuilder.Entity<Category>().HasData(
                 new Category { id = 1, name = "Bebidas", is_active = true },
@@ -189,6 +196,53 @@ namespace LibraryConnection.Context
             new Product { id = 8, category_id = 3, name = "Gomitas 90g", description = "Frutales", price = 1600, stock = 65, image_url = "http://sweetasfudge.com/cdn/shop/products/Assorted-Fruit-Slices-on-White.jpg?v=1681352307", is_active = true },
             new Product { id = 9, category_id = 3, name = "Cupcakes surtidos", description = "Bandeja de cupcakes", price = 1800, stock = 40, image_url = "https://plus.unsplash.com/premium_photo-1681506436855-db38ac7cf9e6?ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1yZWxhdGVkfDR8fHxlbnwwfHx8fHw%3D&auto=format&fit=crop&q=80&w=800", is_active = true }
         );
+
+            // Seed: Users (contraseñas ya cifradas según EncryptCSS actual)
+            modelBuilder.Entity<User>().HasData(
+                new User
+                {
+                    id = 1,
+                    name = "Admin",
+                    last_name = "SnackGol",
+                    email = "admin@snackgol.com",
+                    id_role = 1,
+                    // Encrypted for "Admin123!"
+                    password = "Aq8FzdbXqNxd9aINLMuIGg=="
+                },
+                new User
+                {
+                    id = 2,
+                    name = "Cliente",
+                    last_name = "SnackGol",
+                    email = "cliente@snackgol.com",
+                    id_role = 2,
+                    // Encrypted for "Cliente123!"
+                    password = "dU/QKEZcVX8Ffc08vM8bSg=="
+                }
+            );
         }
+    }
+
+    public class ProductCreateRequest
+    {
+        [Required]
+        public int category_id { get; set; }
+
+        [Required, StringLength(150)]
+        public string name { get; set; } = string.Empty;
+
+        [StringLength(1000)]
+        public string? description { get; set; }
+
+        [Range(0, double.MaxValue)]
+        public double price { get; set; }
+
+        [Range(0, int.MaxValue)]
+        public int stock { get; set; }
+
+        [Url]
+        public string? image_url { get; set; }
+
+        public bool is_active { get; set; } = true;
     }
 }
