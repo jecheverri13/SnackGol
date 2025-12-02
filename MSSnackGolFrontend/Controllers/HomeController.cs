@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Authorization;
 using MSSnackGolFrontend.Models;
 using System.Diagnostics;
 
@@ -13,8 +14,16 @@ namespace MSSnackGolFrontend.Controllers
             _logger = logger;
         }
 
+        /// <summary>
+        /// Página de inicio. Si no está autenticado, redirige al login.
+        /// Si está autenticado, muestra la página de inicio.
+        /// </summary>
         public IActionResult Index()
         {
+            if (!User.Identity?.IsAuthenticated ?? true)
+            {
+                return RedirectToAction("Login", "Account");
+            }
             return View();
         }
 
