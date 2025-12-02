@@ -85,6 +85,62 @@ namespace MSSnackGolFrontend.Controllers
                     new Claim("access_token", token ?? string.Empty)
                 };
 
+                // If the authentication response contains a JWT with role claims, try to decode its payload (no external JWT lib required)
+                try
+                {
+                    if (!string.IsNullOrWhiteSpace(token))
+                    {
+                        var parts = token.Split('.');
+                        if (parts.Length >= 2)
+                        {
+                                var payloadB64 = parts[1];
+                                // Base64 URL decode
+                                payloadB64 = payloadB64.Replace('-', '+').Replace('_', '/');
+                                switch (payloadB64.Length % 4)
+                                {
+                                    case 2: payloadB64 += "=="; break;
+                                    case 3: payloadB64 += "="; break;
+                                    case 1: payloadB64 += "==="; break;
+                                }
+                                var bytes = Convert.FromBase64String(payloadB64);
+                                var json = System.Text.Encoding.UTF8.GetString(bytes);
+                            using var pd = JsonDocument.Parse(json);
+                            var root = pd.RootElement;
+
+                            void AddRoleFromElement(JsonElement el)
+                            {
+                                if (el.ValueKind == JsonValueKind.String)
+                                {
+                                    var v = el.GetString();
+                                    if (!string.IsNullOrWhiteSpace(v)) claims.Add(new Claim(ClaimTypes.Role, v));
+                                }
+                                else if (el.ValueKind == JsonValueKind.Array)
+                                {
+                                    foreach (var item in el.EnumerateArray())
+                                    {
+                                        var v = item.GetString();
+                                        if (!string.IsNullOrWhiteSpace(v)) claims.Add(new Claim(ClaimTypes.Role, v));
+                                    }
+                                }
+                            }
+
+                            if (root.TryGetProperty("role", out var roleEl)) AddRoleFromElement(roleEl);
+                            var roleUri = "http://schemas.microsoft.com/ws/2008/06/identity/claims/role";
+                            if (root.TryGetProperty(roleUri, out var roleEl2)) AddRoleFromElement(roleEl2);
+
+                            if (root.TryGetProperty(ClaimTypes.NameIdentifier, out var nameIdEl) && nameIdEl.ValueKind == JsonValueKind.String)
+                            {
+                                var v = nameIdEl.GetString();
+                                if (!string.IsNullOrWhiteSpace(v)) claims.Add(new Claim(ClaimTypes.NameIdentifier, v));
+                            }
+                        }
+                    }
+                }
+                catch
+                {
+                    // ignore payload parsing errors — login still succeeds without role claims
+                }
+
                 var identity = new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme);
                 var principal = new ClaimsPrincipal(identity);
 
