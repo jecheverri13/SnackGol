@@ -1,5 +1,12 @@
 ﻿@{
     ViewData["Title"] = "Inicio";
+    bool isAdmin = User?.Identity?.IsAuthenticated == true && (User?.IsInRole("Admin") ?? false);
+    string primaryCtaText = isAdmin ? "Ir al inventario" : "Explorar catálogo";
+    string primaryCtaController = isAdmin ? "Producto" : "Producto";
+    string primaryCtaAction = isAdmin ? "Index" : "Index";
+    string secondaryCtaText = isAdmin ? "Revisar pedidos" : "Revisar carrito";
+    string secondaryCtaController = isAdmin ? "AdminPedidos" : "Carrito";
+    string secondaryCtaAction = isAdmin ? "Index" : "Index";
 }
 
 <section class="hero">
@@ -9,13 +16,17 @@
             Entregas rápidas a toda la sede
         </div>
         <h1 class="text-gradient">Energía deliciosa para cada jugada</h1>
-        <p class="lead">Descubre el catálogo curado de snacks y bebidas de SnackGol. Optimiza tus ventas con un sistema intuitivo de carrito y seguimiento de pedidos en tiempo real.</p>
+        <p class="lead">
+            @(isAdmin
+                ? "Administra el ecosistema SnackGol desde un único panel: inventario, pedidos y experiencias de los compradores."
+                : "Descubre el catálogo curado de snacks y bebidas de SnackGol y haz seguimiento de tus pedidos en tiempo real.")
+        </p>
         <div class="d-flex flex-column flex-sm-row justify-content-center gap-3 mt-4">
-            <a class="btn btn-primary btn-lg px-4" asp-controller="Producto" asp-action="Index">
-                <i class="bi bi-shop-window me-2"></i>Explorar catálogo
+            <a class="btn btn-primary btn-lg px-4" asp-controller="@primaryCtaController" asp-action="@primaryCtaAction">
+                <i class="bi bi-shop-window me-2"></i>@primaryCtaText
             </a>
-            <a class="btn btn-outline-dark btn-lg px-4" asp-controller="Carrito" asp-action="Index">
-                <i class="bi bi-bag-check me-2"></i>Revisar carrito
+            <a class="btn btn-outline-dark btn-lg px-4" asp-controller="@secondaryCtaController" asp-action="@secondaryCtaAction">
+                <i class="bi bi-bag-check me-2"></i>@secondaryCtaText
             </a>
         </div>
         <div class="row justify-content-center mt-5 text-start text-sm-center">
@@ -45,27 +56,54 @@
                 <h2 class="section-title mb-3">Una plataforma pensada para equipos que se mueven rápido</h2>
                 <p class="text-muted">Gestiona tu catálogo, actualiza inventario y centraliza pedidos desde una sola consola. SnackGol mantiene sincronizados el autoservicio y la operación interna.</p>
                 <div class="d-flex flex-column gap-3 mt-4">
-                    <div class="d-flex gap-3">
-                        <span class="feature-icon"><i class="bi bi-graph-up"></i></span>
-                        <div>
-                            <h6 class="fw-semibold mb-1">Panel con métricas clave</h6>
-                            <p class="text-muted mb-0">Controla desempeño y ventas por producto con indicadores claros y accionables.</p>
+                    @if (isAdmin)
+                    {
+                        <div class="d-flex gap-3">
+                            <span class="feature-icon"><i class="bi bi-graph-up"></i></span>
+                            <div>
+                                <h6 class="fw-semibold mb-1">Panel con métricas clave</h6>
+                                <p class="text-muted mb-0">Controla desempeño y ventas por producto con indicadores claros y accionables.</p>
+                            </div>
                         </div>
-                    </div>
-                    <div class="d-flex gap-3">
-                        <span class="feature-icon"><i class="bi bi-people"></i></span>
-                        <div>
-                            <h6 class="fw-semibold mb-1">Roles y permisos</h6>
-                            <p class="text-muted mb-0">Administra usuarios, accesos y sesiones desde la API centralizada del proyecto.</p>
+                        <div class="d-flex gap-3">
+                            <span class="feature-icon"><i class="bi bi-people"></i></span>
+                            <div>
+                                <h6 class="fw-semibold mb-1">Roles y permisos</h6>
+                                <p class="text-muted mb-0">Administra usuarios, accesos y sesiones desde la API centralizada del proyecto.</p>
+                            </div>
                         </div>
-                    </div>
-                    <div class="d-flex gap-3">
-                        <span class="feature-icon"><i class="bi bi-bag-heart"></i></span>
-                        <div>
-                            <h6 class="fw-semibold mb-1">Checkout optimizado</h6>
-                            <p class="text-muted mb-0">Una experiencia de compra clara que mejora la conversión y fideliza a tus clientes.</p>
+                        <div class="d-flex gap-3">
+                            <span class="feature-icon"><i class="bi bi-box-seam"></i></span>
+                            <div>
+                                <h6 class="fw-semibold mb-1">Orquestación logística</h6>
+                                <p class="text-muted mb-0">Sincroniza inventario, pedidos y QR de retiro en una sola consola.</p>
+                            </div>
                         </div>
-                    </div>
+                    }
+                    else
+                    {
+                        <div class="d-flex gap-3">
+                            <span class="feature-icon"><i class="bi bi-bag-heart"></i></span>
+                            <div>
+                                <h6 class="fw-semibold mb-1">Checkout optimizado</h6>
+                                <p class="text-muted mb-0">Una experiencia de compra clara que mejora la conversión y fideliza a tus clientes.</p>
+                            </div>
+                        </div>
+                        <div class="d-flex gap-3">
+                            <span class="feature-icon"><i class="bi bi-qr-code"></i></span>
+                            <div>
+                                <h6 class="fw-semibold mb-1">Seguimiento con QR</h6>
+                                <p class="text-muted mb-0">Recibe confirmaciones inmediatas, códigos de retiro y alertas en tiempo real.</p>
+                            </div>
+                        </div>
+                        <div class="d-flex gap-3">
+                            <span class="feature-icon"><i class="bi bi-shield-check"></i></span>
+                            <div>
+                                <h6 class="fw-semibold mb-1">Pagos protegidos</h6>
+                                <p class="text-muted mb-0">Tus transacciones quedan cifradas y asociadas a tu sesión segura.</p>
+                            </div>
+                        </div>
+                    }
                 </div>
             </div>
             <div class="col-lg-7">

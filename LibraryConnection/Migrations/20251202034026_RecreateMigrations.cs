@@ -9,7 +9,7 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace LibraryConnection.Migrations
 {
     /// <inheritdoc />
-    public partial class ActualizarModelo : Migration
+    public partial class RecreateMigrations : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -233,6 +233,16 @@ namespace LibraryConnection.Migrations
 
             migrationBuilder.InsertData(
                 schema: "dev",
+                table: "roles",
+                columns: new[] { "id", "description", "name" },
+                values: new object[,]
+                {
+                    { 1L, "Administrador", "Admin" },
+                    { 2L, "Cliente", "Cliente" }
+                });
+
+            migrationBuilder.InsertData(
+                schema: "dev",
                 table: "products",
                 columns: new[] { "id", "category_id", "description", "image_url", "is_active", "name", "price", "stock" },
                 values: new object[,]
@@ -246,6 +256,16 @@ namespace LibraryConnection.Migrations
                     { 7, 3, "70% cacao", "https://www.ferrerorocher.com/us/sites/ferrerorocher20_us/files/2025-08/250035-t1-rocher-dark-frontale-eng.png?t=1756883333", true, "Chocolate barra 40g", 2000.0, 50 },
                     { 8, 3, "Frutales", "http://sweetasfudge.com/cdn/shop/products/Assorted-Fruit-Slices-on-White.jpg?v=1681352307", true, "Gomitas 90g", 1600.0, 65 },
                     { 9, 3, "Bandeja de cupcakes", "https://plus.unsplash.com/premium_photo-1681506436855-db38ac7cf9e6?ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1yZWxhdGVkfDR8fHxlbnwwfHx8fHw%3D&auto=format&fit=crop&q=80&w=800", true, "Cupcakes surtidos", 1800.0, 40 }
+                });
+
+            migrationBuilder.InsertData(
+                schema: "dev",
+                table: "users",
+                columns: new[] { "id", "email", "id_role", "last_name", "name", "password" },
+                values: new object[,]
+                {
+                    { 1L, "admin@snackgol.com", 1L, "SnackGol", "Admin", "Aq8FzdbXqNxd9aINLMuIGg==" },
+                    { 2L, "cliente@snackgol.com", 2L, "SnackGol", "Cliente", "dU/QKEZcVX8Ffc08vM8bSg==" }
                 });
 
             migrationBuilder.CreateIndex(

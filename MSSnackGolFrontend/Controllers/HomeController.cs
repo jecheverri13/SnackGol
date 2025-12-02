@@ -15,15 +15,11 @@ namespace MSSnackGolFrontend.Controllers
         }
 
         /// <summary>
-        /// Página de inicio. Si no está autenticado, redirige al login.
-        /// Si está autenticado, muestra la página de inicio.
+        /// Página de inicio pública con CTA dinámico.
+        /// Invitados ven la landing; clientes/admins ven acciones respectivas.
         /// </summary>
         public IActionResult Index()
         {
-            if (!User.Identity?.IsAuthenticated ?? true)
-            {
-                return RedirectToAction("Login", "Account");
-            }
             return View();
         }
 

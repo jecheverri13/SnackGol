@@ -1,33 +1,36 @@
 @{
-    Layout = "_Layout"; // reuse existing layout
+    Layout = "_Layout";
     var status = ViewData["StatusCode"] ?? 404;
+    var brokenPath = ViewData["OriginalPath"] as string;
+    var brokenQuery = ViewData["OriginalQuery"] as string;
 }
 
 <main role="main" class="container py-5" aria-live="polite">
     <div class="text-center">
-        <h1 class="display-1">404</h1>
-        <p class="lead">Lo sentimos — la página que buscas no se encuentra.</p>
-        <p>Estado: @status</p>
+        <h1 class="display-1 fw-bold">404</h1>
+        <p class="lead">No encontramos la dirección que escribiste.</p>
+        <p class="text-muted">Código: @status</p>
+        @if (!string.IsNullOrWhiteSpace(brokenPath))
+        {
+            <p class="text-muted small">Ruta solicitada: <code>@brokenPath@brokenQuery</code></p>
+        }
 
-        <form method="get" action="/Home/Search" class="d-flex justify-content-center mb-3" role="search" aria-label="Buscar productos">
-            <input name="q" class="form-control me-2" style="max-width:420px;" placeholder="Buscar productos..." aria-label="Buscar" />
-            <button class="btn btn-primary" type="submit">Buscar</button>
-        </form>
+        <div class="d-flex flex-column flex-sm-row justify-content-center gap-3 my-4">
+            <a class="btn btn-primary" asp-controller="Home" asp-action="Index"><i class="bi bi-house me-1"></i>Volver al inicio</a>
+            <a class="btn btn-outline-dark" asp-controller="Producto" asp-action="Index"><i class="bi bi-box me-1"></i>Ir al catálogo</a>
+            <a class="btn btn-outline-secondary" asp-controller="Carrito" asp-action="Index"><i class="bi bi-bag me-1"></i>Ver carrito</a>
+        </div>
 
-        <p>
-            <a href="/" class="btn btn-outline-secondary me-2">Volver al inicio</a>
-            <a href="/Products" class="btn btn-outline-secondary">Ver productos</a>
-        </p>
-
-        <hr />
-
-        <h5>Ideas rápidas</h5>
-        <ul class="list-unstyled">
-            <li>Revisa el enlace que intentaste abrir.</li>
-            <li>Usa la búsqueda para encontrar productos similares.</li>
-            <li>Si crees que esto es un error, <a href="mailto:support@snackgol.local">contáctanos</a>.</li>
-        </ul>
-
-        <small class="text-muted">Si esto ocurre frecuentemente, por favor copia la URL y envíanosla para investigarlo.</small>
+        <div class="card card-soft mx-auto" style="max-width: 640px;">
+            <div class="card-body">
+                <h5 class="fw-semibold mb-3">¿Por qué estoy viendo esto?</h5>
+                <ul class="text-start text-muted mb-4">
+                    <li>El enlace que abriste está mal escrito o ya no existe.</li>
+                    <li>La página cambió de lugar después de la última actualización.</li>
+                    <li>No tienes permisos para acceder a ese recurso.</li>
+                </ul>
+                <p class="mb-0">Si necesitas ayuda, escríbenos a <a href="mailto:soporte@snackgol.dev">soporte@snackgol.dev</a>.</p>
+            </div>
+        </div>
     </div>
 </main>

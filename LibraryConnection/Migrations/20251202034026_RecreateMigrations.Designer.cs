@@ -12,8 +12,8 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace LibraryConnection.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20251125144033_ActualizarModelo")]
-    partial class ActualizarModelo
+    [Migration("20251202034026_RecreateMigrations")]
+    partial class RecreateMigrations
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -394,6 +394,20 @@ namespace LibraryConnection.Migrations
                     b.HasKey("id");
 
                     b.ToTable("roles", "dev");
+
+                    b.HasData(
+                        new
+                        {
+                            id = 1L,
+                            description = "Administrador",
+                            name = "Admin"
+                        },
+                        new
+                        {
+                            id = 2L,
+                            description = "Cliente",
+                            name = "Cliente"
+                        });
                 });
 
             modelBuilder.Entity("LibraryConnection.DbSet.User", b =>
@@ -428,6 +442,26 @@ namespace LibraryConnection.Migrations
                     b.HasIndex("id_role");
 
                     b.ToTable("users", "dev");
+
+                    b.HasData(
+                        new
+                        {
+                            id = 1L,
+                            email = "admin@snackgol.com",
+                            id_role = 1L,
+                            last_name = "SnackGol",
+                            name = "Admin",
+                            password = "Aq8FzdbXqNxd9aINLMuIGg=="
+                        },
+                        new
+                        {
+                            id = 2L,
+                            email = "cliente@snackgol.com",
+                            id_role = 2L,
+                            last_name = "SnackGol",
+                            name = "Cliente",
+                            password = "dU/QKEZcVX8Ffc08vM8bSg=="
+                        });
                 });
 
             modelBuilder.Entity("LibraryConnection.DbSet.CartItem", b =>

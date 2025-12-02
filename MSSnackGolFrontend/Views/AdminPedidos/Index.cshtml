@@ -4,102 +4,228 @@
     Layout = "~/Views/Shared/_Layout.cshtml";
 }
 
-<div class="container mt-4">
-    <h2>Pedidos Nuevos</h2>
+<div class="container py-4 py-lg-5">
+    <div class="d-flex flex-column flex-lg-row justify-content-between align-items-lg-center gap-3 mb-4">
+        <div>
+            <span class="pill mb-2"><i class="bi bi-list-check"></i> Panel de operaciones</span>
+            <h2 class="section-title mb-1">Pedidos nuevos</h2>
+            <p class="text-muted mb-0">Aprueba, prepara o entrega cada orden sin salir de esta vista.</p>
+        </div>
+        <div class="text-muted small">
+            <i class="bi bi-arrow-repeat me-1"></i>Auto-refresco: 1 hora
+        </div>
+    </div>
 
     @if (TempData["ErrorFlash"] != null)
     {
-        <div class="alert alert-danger" role="alert">@TempData["ErrorFlash"]</div>
+        <div class="alert alert-danger d-flex align-items-center" role="alert">
+            <i class="bi bi-exclamation-triangle-fill me-2"></i>@TempData["ErrorFlash"]
+        </div>
     }
     @if (TempData["SuccessFlash"] != null)
     {
-        <div class="alert alert-success" role="alert">@TempData["SuccessFlash"]</div>
+        <div class="alert alert-success d-flex align-items-center" role="alert">
+            <i class="bi bi-check-circle-fill me-2"></i>@TempData["SuccessFlash"]
+        </div>
     }
 
-    <div class="d-flex justify-content-between align-items-center mb-2">
-        <form class="form-inline" method="get" action="/AdminPedidos">
-            <label class="me-2">Ventana:</label>
-            <select name="window" class="form-select form-select-sm me-2">
-                <option value="15m">15 minutos</option>
-                <option value="30m">30 minutos</option>
-                <option value="60m" selected>1 hora</option>
-                <option value="today">Hoy</option>
-            </select>
-            <button class="btn btn-sm btn-secondary" type="submit">Aplicar</button>
-        </form>
-        <div class="text-muted small">Auto-refresco: 1 hora</div>
+    <div class="card card-soft border-0 mb-4">
+        <div class="card-body">
+            <div class="row g-3 align-items-center">
+                <div class="col-md-6">
+                    <form class="row g-2 align-items-center" method="get" action="/AdminPedidos">
+                        <div class="col-auto">
+                            <label class="col-form-label text-muted">Ventana:</label>
+                        </div>
+                        <div class="col">
+                            <select name="window" class="form-select form-select-sm">
+                                <option value="15m">Últimos 15 min</option>
+                                <option value="30m">Últimos 30 min</option>
+                                <option value="60m" selected>Última hora</option>
+                                <option value="today">Hoy</option>
+                            </select>
+                        </div>
+                        <div class="col-auto">
+                            <button class="btn btn-sm btn-primary" type="submit">
+                                <i class="bi bi-funnel me-1"></i>Aplicar
+                            </button>
+                        </div>
+                    </form>
+                </div>
+                <div class="col-md-6">
+                    <div class="row g-2" id="ordersSummary">
+                        <div class="col-4">
+                            <div class="summary-chip">
+                                <span class="label">Total</span>
+                                <strong data-summary="total">0</strong>
+                            </div>
+                        </div>
+                        <div class="col-4">
+                            <div class="summary-chip">
+                                <span class="label">En curso</span>
+                                <strong data-summary="progress">0</strong>
+                            </div>
+                        </div>
+                        <div class="col-4">
+                            <div class="summary-chip">
+                                <span class="label">Listos</span>
+                                <strong data-summary="ready">0</strong>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
 
-    <table id="ordersTable" class="table table-striped table-hover">
-        <thead>
-            <tr>
-                <th>Pedido</th>
-                <th>Estado</th>
-                <th>Fecha</th>
-                <th>Ítems</th>
-                <th>Total</th>
-                <th>Acciones</th>
-            </tr>
-        </thead>
-        <tbody>
-            <!-- Rows will be rendered client-side from JSON model -->
-        </tbody>
-    </table>
+    <div class="card border-0 shadow-sm">
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table id="ordersTable" class="table table-hover align-middle mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Pedido</th>
+                            <th>Estado</th>
+                            <th>Fecha</th>
+                            <th>Ítems</th>
+                            <th>Total</th>
+                            <th class="text-end">Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <!-- Rendered client-side -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
 
     <script>
         (function(){
             try {
                 var json = @Html.Raw(Model ?? "[]");
-                var orders = json;
-                if (typeof orders === 'string') {
-                    orders = JSON.parse(orders || '[]');
-                }
+                var orders = typeof json === 'string' ? JSON.parse(json || '[]') : json;
+                var tbody = document.querySelector('#ordersTable tbody');
+                var summaryTotal = document.querySelector('[data-summary="total"]');
+                var summaryProgress = document.querySelector('[data-summary="progress"]');
+                var summaryReady = document.querySelector('[data-summary="ready"]');
+                var currencyFormat = new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP' });
 
                 function badgeClass(status) {
                     switch (status) {
-                        case 'Confirmed': return 'status-confirmed badge';
-                        case 'Preparing': return 'status-preparing badge';
-                        case 'ReadyForPickup': return 'status-ready badge';
-                        case 'Delivered': return 'status-delivered badge';
-                        default: return 'badge-secondary';
+                        case 'Confirmed': return 'badge rounded-pill bg-primary-subtle text-primary';
+                        case 'Preparing': return 'badge rounded-pill bg-warning-subtle text-warning-emphasis';
+                        case 'ReadyForPickup': return 'badge rounded-pill bg-success-subtle text-success';
+                        case 'Delivered': return 'badge rounded-pill bg-secondary-subtle text-secondary';
+                        default: return 'badge bg-secondary';
                     }
                 }
 
                 function getNextOptionsHtml(status) {
-                    if (!status) return '<select name="selectedNext" class="form-select form-select-sm d-inline-block me-1" style="width:auto;"><option value="">-</option></select>';
-                    switch (status) {
-                        case 'Confirmed':
-                            return '<select name="selectedNext" class="form-select form-select-sm d-inline-block me-1" style="width:auto;"><option value="Preparing">Preparing</option></select>';
-                        case 'Preparing':
-                            return '<select name="selectedNext" class="form-select form-select-sm d-inline-block me-1" style="width:auto;"><option value="ReadyForPickup">Ready for pickup</option></select>';
-                        case 'ReadyForPickup':
-                            return '<select name="selectedNext" class="form-select form-select-sm d-inline-block me-1" style="width:auto;"><option value="Delivered">Delivered</option></select>';
-                        default:
-                            return '<select name="selectedNext" class="form-select form-select-sm d-inline-block me-1" style="width:auto;" disabled><option value="">-</option></select>';
+                    if (!status) {
+                        return '<select name="selectedNext" class="form-select form-select-sm me-2" disabled><option value="">No disponible</option></select>';
                     }
+                    var options = [];
+                    if (status === 'Confirmed') options.push({ value: 'Preparing', label: 'Preparando' });
+                    if (status === 'Preparing') options.push({ value: 'ReadyForPickup', label: 'Listo para retiro' });
+                    if (status === 'ReadyForPickup') options.push({ value: 'Delivered', label: 'Entregado' });
+                    if (options.length === 0) {
+                        return '<select name="selectedNext" class="form-select form-select-sm me-2" disabled><option value="">Completado</option></select>';
+                    }
+                    var html = '<select name="selectedNext" class="form-select form-select-sm me-2">';
+                    options.forEach(function(opt){ html += '<option value="' + opt.value + '">' + opt.label + '</option>'; });
+                    html += '</select>';
+                    return html;
                 }
 
-                var tbody = document.querySelector('#ordersTable tbody');
-                orders.forEach(function(o) {
+                var progressCount = 0;
+                var readyCount = 0;
+
+                (orders || []).forEach(function(o) {
                     var orderId = o.orderId || '';
-                    var shortId = orderId.length > 8 ? orderId.substring(0,8) : orderId;
+                    var shortId = orderId ? orderId.slice(-8) : '—';
                     var status = o.status || '';
                     var orderDate = o.orderDate ? new Date(o.orderDate) : null;
                     var items = o.itemsCount || 0;
-                    var total = o.total || 0;
+                    var total = typeof o.total === 'number' ? o.total : 0;
 
+                    if (status && status !== 'Delivered') progressCount += 1;
+                    if (status === 'ReadyForPickup') readyCount += 1;
                     var tr = document.createElement('tr');
-                    var selectHtml = getNextOptionsHtml(status);
-                    tr.innerHTML = '\n+                        <td>' + shortId + '</td>\n+                        <td><span class="' + badgeClass(status) + '">' + status + '</span></td>\n+                        <td>' + (orderDate ? orderDate.toLocaleString() : '-') + '</td>\n+                        <td>' + items + '</td>\n+                        <td>' + (total.toLocaleString(undefined, {style: 'currency', currency: 'USD'})) + '</td>\n+                        <td>\n+                            <form method="post" action="/AdminPedidos/UpdateEstado" style="display:inline-flex; align-items:center; gap:4px;">\n+                                <input name="__RequestVerificationToken" type="hidden" value="' + '@Antiforgery.GetAndStoreTokens(Context).RequestToken' + '" />\n+                                <input type="hidden" name="orderId" value="' + orderId + '" />\n+                                ' + selectHtml + '\n+                                <button class="btn btn-sm btn-primary" ' + (status === 'Delivered' ? 'disabled' : '') + '>Cambiar estado</button>\n+                            </form>\n+                        </td>';
-                    tbody.appendChild(tr);
+                    tr.innerHTML =
+                        '<td class="fw-semibold">' + shortId + '</td>' +
+                        '<td><span class="' + badgeClass(status) + '">' + (status || '—') + '</span></td>' +
+                        '<td>' + (orderDate ? orderDate.toLocaleString('es-CO') : '-') + '</td>' +
+                        '<td>' + items + '</td>' +
+                        '<td>' + currencyFormat.format(total) + '</td>' +
+                        '<td class="text-end">' +
+                            '<form method="post" action="/AdminPedidos/UpdateEstado" class="d-inline-flex align-items-center justify-content-end gap-2">' +
+                                '<input name="__RequestVerificationToken" type="hidden" value="' + '@Antiforgery.GetAndStoreTokens(Context).RequestToken' + '" />' +
+                                '<input type="hidden" name="orderId" value="' + orderId + '" />' +
+                                getNextOptionsHtml(status) +
+                                '<button class="btn btn-sm btn-primary" ' + (status === 'Delivered' ? 'disabled' : '') + '>Actualizar</button>' +
+                            '</form>' +
+                        '</td>';
+                    if (tbody) tbody.appendChild(tr);
                 });
+
+                // Empty state
+                if ((orders?.length || 0) === 0 && tbody) {
+                    var emptyTr = document.createElement('tr');
+                    emptyTr.innerHTML = '<td colspan="6" class="text-center text-muted py-4"><i class="bi bi-inbox me-2"></i>No hay pedidos en la ventana seleccionada.</td>';
+                    tbody.appendChild(emptyTr);
+                }
+
+                if (summaryTotal) summaryTotal.textContent = (orders?.length || 0).toString();
+                if (summaryProgress) summaryProgress.textContent = progressCount.toString();
+                if (summaryReady) summaryReady.textContent = readyCount.toString();
             } catch (ex) {
                 console.error('Error rendering orders table', ex);
             }
-            // Auto-refresh cada 1 hora (3600000 ms)
+
             setInterval(function(){
                 try { window.location.reload(); } catch(e) { console.error(e); }
             }, 3600000);
         })();
     </script>
+
+    @section Styles {
+        <style>
+            /* Admin Pedidos styles */
+            .summary-chip {
+                border: 1px solid rgba(15,23,42,.08);
+                border-radius: 0.85rem;
+                padding: 0.5rem 0.75rem;
+                background: #fff;
+                text-align: center;
+            }
+            .summary-chip .label {
+                display: block;
+                font-size: 0.75rem;
+                color: #94a3b8;
+                text-transform: uppercase;
+                letter-spacing: .05em;
+            }
+            .summary-chip strong {
+                font-size: 1.35rem;
+                color: #0f172a;
+            }
+            .card-soft {
+                background: #f8fafc;
+                border: 1px solid rgba(15,23,42,.05);
+            }
+            #ordersTable tbody tr td {
+                vertical-align: middle;
+            }
+            #ordersTable thead th {
+                white-space: nowrap;
+            }
+            @@media (max-width: 576px) {
+                #ordersTable thead { display: none; }
+                #ordersTable tbody tr { display: grid; grid-template-columns: 1fr; padding: .75rem 1rem; border-bottom: 1px solid rgba(15,23,42,.05); }
+                #ordersTable tbody td { display: flex; justify-content: space-between; padding: .25rem 0; }
+                #ordersTable tbody td.text-end { justify-content: flex-end; }
+            }
+        </style>
+    }
 </div>

@@ -1,5 +1,6 @@
 ﻿using LibraryConnection.Dtos;
 using LibraryEntities.Models;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
@@ -27,14 +28,33 @@ namespace MSSnackGolFrontend.Controllers
             return HttpContext.Session.GetString(key)!;
         }
 
-        [HttpGet]
-        public async Task<IActionResult> Index()
+        private HttpClient CreateApiClient()
         {
             var token = GetOrCreateSessionToken();
             var client = _httpClientFactory.CreateClient("Api");
             client.DefaultRequestHeaders.Remove("X-Session-Token");
             client.DefaultRequestHeaders.Add("X-Session-Token", token);
+            return client;
+        }
 
+        private async Task<ProductDto?> FetchProductAsync(int id)
+        {
+            try
+            {
+                var client = CreateApiClient();
+                var resp = await client.GetFromJsonAsync<Response<ProductDto>>($"api/ProductManagment/{id}");
+                return resp?.response;
+            }
+            catch
+            {
+                return null;
+            }
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> Index()
+        {
+            var client = CreateApiClient();
             var vm = new Models.CartPageViewModel();
             try
             {
@@ -50,6 +70,7 @@ namespace MSSnackGolFrontend.Controllers
             return View(vm);
         }
 
+        [Authorize(Roles = "Admin")]
         [HttpGet]
         public IActionResult Create()
         {
@@ -57,16 +78,14 @@ namespace MSSnackGolFrontend.Controllers
             return View(model);
         }
 
+        [Authorize(Roles = "Admin")]
         [HttpPost]
         public async Task<IActionResult> Create(ProductCreateRequest model)
         {
             if (!ModelState.IsValid)
                 return View(model);
 
-            var token = GetOrCreateSessionToken();
-            var client = _httpClientFactory.CreateClient("Api");
-            client.DefaultRequestHeaders.Remove("X-Session-Token");
-            client.DefaultRequestHeaders.Add("X-Session-Token", token);
+            var client = CreateApiClient();
 
             try
             {
@@ -88,13 +107,11 @@ namespace MSSnackGolFrontend.Controllers
             }
         }
 
+        [Authorize(Roles = "Admin")]
         [HttpGet]
         public async Task<IActionResult> Edit(int id)
         {
-            var token = GetOrCreateSessionToken();
-            var client = _httpClientFactory.CreateClient("Api");
-            client.DefaultRequestHeaders.Remove("X-Session-Token");
-            client.DefaultRequestHeaders.Add("X-Session-Token", token);
+            var client = CreateApiClient();
 
             try
             {
@@ -121,6 +138,7 @@ namespace MSSnackGolFrontend.Controllers
             }
         }
 
+        [Authorize(Roles = "Admin")]
         [HttpPost]
         public async Task<IActionResult> Edit(int id, ProductCreateRequest model)
         {
@@ -130,10 +148,7 @@ namespace MSSnackGolFrontend.Controllers
                 return View(model);
             }
 
-            var token = GetOrCreateSessionToken();
-            var client = _httpClientFactory.CreateClient("Api");
-            client.DefaultRequestHeaders.Remove("X-Session-Token");
-            client.DefaultRequestHeaders.Add("X-Session-Token", token);
+            var client = CreateApiClient();
 
             try
             {
@@ -151,6 +166,60 @@ namespace MSSnackGolFrontend.Controllers
                 ModelState.AddModelError(string.Empty, "Error al conectar con la API: " + ex.Message);
                 ViewData["ProductId"] = id;
                 return View(model);
+            }
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> Details(int id)
+        {
+            var product = await FetchProductAsync(id);
+            if (product == null)
+            {
+                TempData["CatalogFlash"] = "No encontramos el producto que intentaste abrir.";
+                return RedirectToAction(nameof(Index));
+            }
+
+            return View(product);
+        }
+
+        [Authorize(Roles = "Admin")]
+        [HttpGet]
+        public async Task<IActionResult> Delete(int id)
+        {
+            var product = await FetchProductAsync(id);
+            if (product == null)
+            {
+                TempData["CatalogFlash"] = "El producto ya no está disponible.";
+                return RedirectToAction(nameof(Index));
+            }
+
+            return View(product);
+        }
+
+        [Authorize(Roles = "Admin")]
+        [HttpPost, ActionName("Delete")]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> DeleteConfirmed(int id)
+        {
+            var client = CreateApiClient();
+            try
+            {
+                var request = new HttpRequestMessage(HttpMethod.Delete, $"api/ProductManagment/{id}");
+                var response = await client.SendAsync(request);
+                if (response.IsSuccessStatusCode)
+                {
+                    TempData["CatalogFlash"] = "Producto eliminado correctamente.";
+                    return RedirectToAction(nameof(Index));
+                }
+
+                var details = await response.Content.ReadAsStringAsync();
+                TempData["CatalogFlash"] = $"No pudimos eliminar el registro (HTTP {(int)response.StatusCode}). {details}";
+                return RedirectToAction(nameof(Delete), new { id });
+            }
+            catch (Exception ex)
+            {
+                TempData["CatalogFlash"] = "Error al comunicarse con la API: " + ex.Message;
+                return RedirectToAction(nameof(Delete), new { id });
             }
         }
     }

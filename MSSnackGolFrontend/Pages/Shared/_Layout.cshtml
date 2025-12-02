@@ -9,7 +9,7 @@
 </head>
 <body>
     @{
-        bool isAdmin = User?.Identity?.IsAuthenticated == true && User.IsInRole("Admin");
+        bool isAdmin = User?.Identity?.IsAuthenticated == true && (User?.IsInRole("Admin") ?? false);
     }
     <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
         <div class="container">

@@ -53,6 +53,19 @@ body {
   background: radial-gradient(circle at top left, #343a40 0%, #1f2230 60%, #181a24 100%);
 }
 
+/* Ensure collapsed navbar shows full menu on small screens */
+.navbar-collapse {
+  max-height: 70vh;
+  overflow-y: auto;
+}
+
+@media (min-width: 992px) {
+  .navbar-collapse {
+    max-height: none;
+    overflow: visible;
+  }
+}
+
 .navbar-brand {
   letter-spacing: 0.02em;
 }

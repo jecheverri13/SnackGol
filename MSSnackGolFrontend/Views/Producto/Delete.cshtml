@@ -1,0 +1,40 @@
+@model LibraryConnection.Dtos.ProductDto
+@{
+    ViewData["Title"] = "Eliminar producto";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+    var co = new System.Globalization.CultureInfo("es-CO");
+}
+
+<div class="container py-4">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="card border-danger-subtle shadow-sm">
+                <div class="card-header bg-danger text-white d-flex align-items-center justify-content-between">
+                    <h4 class="mb-0"><i class="bi bi-exclamation-triangle me-2"></i>Confirmar eliminación</h4>
+                </div>
+                <div class="card-body">
+                    <p class="lead">¿Estás seguro de que deseas eliminar este producto? Esta acción no se puede deshacer.</p>
+                    <dl class="row mb-4">
+                        <dt class="col-sm-4">Nombre</dt>
+                        <dd class="col-sm-8">@Model?.name</dd>
+                        <dt class="col-sm-4">Precio</dt>
+                        <dd class="col-sm-8">@Model?.price.ToString("C0", co)</dd>
+                        <dt class="col-sm-4">Stock</dt>
+                        <dd class="col-sm-8">@Model?.stock</dd>
+                        <dt class="col-sm-4">Estado</dt>
+                        <dd class="col-sm-8">@(Model?.is_active == true ? "Activo" : "Inactivo")</dd>
+                    </dl>
+                    <form asp-action="Delete" method="post" class="d-flex flex-wrap gap-3">
+                        @Html.AntiForgeryToken()
+                        <input type="hidden" name="id" value="@Model?.id" />
+                        <button type="submit" class="btn btn-danger"><i class="bi bi-trash me-1"></i>Eliminar definitivamente</button>
+                        <a asp-action="Index" class="btn btn-outline-secondary">Cancelar</a>
+                    </form>
+                    <div class="alert alert-warning mt-4 mb-0">
+                        Considera desactivar temporalmente el producto desde la API si solo necesitas ocultarlo.
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
