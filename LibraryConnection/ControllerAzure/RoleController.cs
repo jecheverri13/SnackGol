@@ -54,7 +54,7 @@ namespace LibraryConnection.ControllerAzure
         /// Obtener todos los roles
         /// </summary>
         /// <returns>Response<RoleResponse></returns>
-        public static Response<RoleResponse> GetDbRoles()
+        public static Response<List<RoleResponse>> GetDbRoles()
         {
             try
             {
@@ -69,17 +69,17 @@ namespace LibraryConnection.ControllerAzure
                          name = e.name,
                          description = e.description
                      })
-                    .ToList()
-                    .FirstOrDefault();
+                    .ToList();
+                    
 
 
                     if (oRole != null)
                     {
-                        return new Response<RoleResponse>(true, HttpStatusCode.OK, oRole);
+                        return new Response<List<RoleResponse>>(true, HttpStatusCode.OK, oRole);
                     }
                     else
                     {
-                        return new Response<RoleResponse>(false, HttpStatusCode.NotFound, "No se encontró un rol.");
+                        return new Response<List<RoleResponse>>(false, HttpStatusCode.NotFound, "No se encontró un rol.");
                     }
                 }
             }
@@ -90,7 +90,7 @@ namespace LibraryConnection.ControllerAzure
                 {
                     errorMessage += " Inner exception: " + ex.InnerException.Message;
                 }
-                return new Response<RoleResponse>(false, HttpStatusCode.InternalServerError, "Error obteniendo el rol.", errorMessage);
+                return new Response<List<RoleResponse>>(false, HttpStatusCode.InternalServerError, "Error obteniendo el rol.", errorMessage);
             }
         }
     }   

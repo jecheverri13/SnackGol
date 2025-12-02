@@ -14,15 +14,95 @@
     @RenderSection("Styles", required: false)
 </head>
 <body>
+    <script>
+        // Extraer rol del token JWT en sessionStorage
+        function getRoleFromToken() {
+            const token = sessionStorage.getItem('access_token');
+            if (!token) return null;
+            
+            try {
+                // El JWT tiene formato: header.payload.signature
+                const parts = token.split('.');
+                if (parts.length !== 3) return null;
+                
+                // Decodificar el payload (segunda parte)
+                const payload = JSON.parse(atob(parts[1]));
+                console.log('Token payload:', payload);
+                
+                // Buscar el array de roles en diferentes propiedades posibles
+                let roles = payload['http://schemas.microsoft.com/ws/2008/06/identity/claims/role'] 
+                         || payload['role'] 
+                         || payload['Role'];
+                
+                console.log('Roles encontrados:', roles);
+                
+                // Convertir a array si es string
+                if (typeof roles === 'string') {
+                    roles = [roles];
+                }
+                
+                // Verificar si "Admin" está en la lista de roles
+                if (Array.isArray(roles) && roles.includes('Admin')) {
+                    console.log('Usuario es Admin');
+                    return 'Admin';
+                }
+                
+                return null;
+            } catch (e) {
+                console.error('Error al decodificar token:', e);
+                return null;
+            }
+        }
+        
+        // Guardar el rol en sessionStorage para uso en Razor
+        const userRole = getRoleFromToken();
+        if (userRole) {
+            sessionStorage.setItem('userRole', userRole);
+            console.log('Rol guardado en sessionStorage:', userRole);
+            
+            // Actualizar isAdmin basado en userRole
+            if (userRole === 'Admin') {
+                console.log('isAdmin establecido a true');
+            }
+        }
+    </script>
+
     @{
         string controller = ViewContext.RouteData.Values["controller"]?.ToString() ?? string.Empty;
         string action = ViewContext.RouteData.Values["action"]?.ToString() ?? string.Empty;
         Func<string, string, string> isActive = (expectedController, expectedAction) =>
             controller.Equals(expectedController, StringComparison.OrdinalIgnoreCase) &&
             action.Equals(expectedAction, StringComparison.OrdinalIgnoreCase) ? " active" : string.Empty;
-        
-        bool isAdmin = User.Identity?.IsAuthenticated == true && User.IsInRole("Admin");
     }
+    
+    <script>
+        // Mostrar/ocultar elementos admin basado en el rol
+        function updateAdminVisibility() {
+            const userRole = getRoleFromToken();
+            const isAdmin = userRole === 'Admin';
+            
+            console.log('Actualizando visibilidad de Admin. isAdmin:', isAdmin);
+            
+            // Mostrar/ocultar elemento de Carrito
+            const carritoItem = document.getElementById('carritoNavItem');
+            if (carritoItem) {
+                carritoItem.style.display = isAdmin ? 'block' : 'none';
+            }
+            
+            // Mostrar/ocultar botón Nuevo Producto
+            const nuevoProductoBtn = document.getElementById('nuevoproductoBtn');
+            if (nuevoProductoBtn) {
+                nuevoProductoBtn.style.display = isAdmin ? 'block' : 'none';
+            }
+        }
+        
+        // Ejecutar cuando el DOM está listo
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', updateAdminVisibility);
+        } else {
+            updateAdminVisibility();
+        }
+    </script>
     <header class="main-nav shadow-sm">
         <nav class="navbar navbar-expand-lg navbar-dark py-3">
             <div class="container">
@@ -36,6 +116,7 @@
                 <div class="collapse navbar-collapse" id="mainNavbar">
                     <ul class="navbar-nav ms-auto align-items-lg-center gap-lg-2">
                         @if (User.Identity?.IsAuthenticated == true)
+                        
                         {
                             <li class="nav-item">
                                 <a class="nav-link@(controller.Equals("Home", StringComparison.OrdinalIgnoreCase) && action.Equals("Index", StringComparison.OrdinalIgnoreCase) ? " active" : string.Empty)" asp-area="" asp-controller="Home" asp-action="Index">Inicio</a>
@@ -52,21 +133,15 @@
                                 <a class="nav-link" href="/#contacto">Contacto</a>
                             </li>
                         }
-                        @if (isAdmin)
-                        {
-                            <li class="nav-item">
-                                <a class="nav-link@(controller.Equals("Carrito", StringComparison.OrdinalIgnoreCase) ? " active" : string.Empty)" asp-area="" asp-controller="Carrito" asp-action="Index">Carrito</a>
-                            </li>
-                        }
+                        <li class="nav-item admin-only" id="carritoNavItem" style="display: none;">
+                            <a class="nav-link@(controller.Equals("Carrito", StringComparison.OrdinalIgnoreCase) ? " active" : string.Empty)" asp-area="" asp-controller="Carrito" asp-action="Index">Carrito</a>
+                        </li>
                     </ul>
                     <div class="d-flex mt-3 mt-lg-0 ms-lg-4 gap-2 align-items-center flex-wrap">
                         <a class="btn btn-outline-light" asp-area="" asp-controller="Home" asp-action="Privacy">Aviso de Privacidad</a>
-                        @if (isAdmin)
-                        {
-                            <a class="btn btn-outline-light" asp-area="" asp-controller="Producto" asp-action="Create">
-                                <i class="bi bi-plus-circle me-1"></i>Nuevo producto
-                            </a>
-                        }
+                        <a class="btn btn-outline-light admin-only" id="nuevoproductoBtn" style="display: none;" asp-area="" asp-controller="Producto" asp-action="Create">
+                            <i class="bi bi-plus-circle me-1"></i>Nuevo producto
+                        </a>
                         @if (User.Identity?.IsAuthenticated == true)
                         {
                             <span class="text-light d-none d-lg-inline me-2">

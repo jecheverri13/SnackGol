@@ -90,6 +90,9 @@ namespace MSSnackGolFrontend.Controllers
 
                 await HttpContext.SignInAsync(CookieAuthenticationDefaults.AuthenticationScheme, principal);
 
+                // Guardar el token en TempData para que se pase a la vista
+                TempData["Token"] = token;
+
                 if (!string.IsNullOrEmpty(model.ReturnUrl) && Url.IsLocalUrl(model.ReturnUrl))
                 {
                     return Redirect(model.ReturnUrl);

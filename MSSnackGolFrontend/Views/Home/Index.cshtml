@@ -186,3 +186,18 @@
         </div>
     </div>
 </section>
+
+@section Scripts {
+    <script>
+        // Guardar el token en sessionStorage si está disponible en TempData
+        @if (!string.IsNullOrEmpty(TempData["Token"]?.ToString()))
+        {
+            <text>
+                const token = '@TempData["Token"]';
+                if (token) {
+                    sessionStorage.setItem('access_token', token);
+                }
+            </text>
+        }
+    </script>
+}
